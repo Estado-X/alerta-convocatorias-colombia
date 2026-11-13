@@ -19,8 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: Revisar las páginas de fuentes.txt
@@ -38,5 +38,6 @@ jobs:
             echo "Sin cambios que guardar."
           else
             git commit -m "Revisión de convocatorias $(date -u +%Y-%m-%d)"
+            git pull --rebase
             git push
           fi

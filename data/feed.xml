@@ -2,8 +2,9 @@
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>Alerta de convocatorias · Estado X</title>
   <link href="https://estado-x.github.io/alerta-convocatorias-colombia/"/>
+  <link rel="self" href="https://estado-x.github.io/alerta-convocatorias-colombia/data/feed.xml"/>
   <id>https://estado-x.github.io/alerta-convocatorias-colombia/</id>
-  <updated>2026-11-13T18:00:32+00:00</updated>
+  <updated>2026-11-13T18:20:43+00:00</updated>
   <author><name>Estado X</name></author>
 
 </feed>

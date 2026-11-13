@@ -14,7 +14,7 @@ Una herramienta gratis y abierta que revisa cada mañana páginas oficiales de c
 
 - Revisa cada mañana las páginas de `fuentes.txt`: hoy, MinCiencias, MinTIC, APC-Colombia (fondos de cooperación y comisiones mixtas sur-sur), ICETEX (becas en el exterior), Fondo Acción, Fondo Emprender, el Fondo Multidonante de la ONU para la Paz y la Fundación Bolívar Davivienda.
 - Muestra cuándo cambió cada página y qué líneas nuevas aparecieron.
-- Avisa de tres formas, sin cuentas ni formularios: en la página, por RSS (`data/feed.xml`) y con un aviso en GitHub que llega por correo a quien siga el repo.
+- Avisa de tres formas, sin formularios: en la página y por RSS (`data/feed.xml`), sin cuentas, y con un aviso en GitHub que llega por correo a quien siga el repo (con una cuenta gratis de GitHub).
 
 ### Cómo funciona
 
@@ -32,6 +32,7 @@ Solo usa la biblioteca estándar de Python: no hay servidor, base de datos ni cl
 3. En la pestaña **Actions**, activa los flujos. Para prender la revisión diaria, en `.github/workflows/revisar.yml` quita `# ` al inicio de las dos líneas de `schedule`. Con **Run workflow** puedes correrla a mano.
 4. Pulsa **Watch → Custom → Issues** para recibir un correo cada vez que una página cambie. Si no quieres avisos en GitHub, cambia `AVISOS_GITHUB: "si"` por `"no"` en el flujo.
 5. Para ver tu página, activa GitHub Pages (Settings → Pages → rama `main`, carpeta raíz).
+6. Deja tu copia limpia: borra el contenido de `data/` (se vuelve a crear en la primera revisión) y cambia en `index.html` los enlaces que llevan a este repo por los de tu copia.
 
 Para probar en tu computador: `python scripts/revisar.py` (Python 3.10 o más reciente).
 
@@ -61,6 +62,6 @@ A free, open tool that checks official Colombian pages for funding calls, grants
 - **How it works:** a GitHub Actions workflow runs `scripts/revisar.py` (Python standard library only), which extracts each page's visible text, compares it with the previous run and records the differences. No server, database or API keys.
 - **Make your own list:** click **Use this template**, edit `fuentes.txt` (`Name | URL`, one per line), enable Actions and uncomment the two `schedule` lines in `.github/workflows/revisar.yml`, then **Watch → Custom → Issues** to get emails.
 - **Limits:** it doesn't read or summarize calls, judge eligibility or apply for you; it only detects that a page changed. It can't watch pages behind a login, built entirely with JavaScript or that block bots. A redesign can show up as a change.
-- **Credit:** inspired by [changedetection.io](https://github.com/dgtlmoon/changedetection.io) by dgtlmoon (Apache-2.0), rewritten from scratch without a server. Calls and data belong to each organization.
+- **Credit:** inspired by [changedetection.io](https://github.com/dgtlmoon/changedetection.io) by dgtlmoon (Apache-2.0), written from scratch without a server; it doesn't reuse its code. Calls and data belong to each organization.
 
 Made by Estado X · MIT license.

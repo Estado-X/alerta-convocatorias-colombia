@@ -24,6 +24,7 @@ import os
 import re
 import socket
 import sys
+import time
 import unicodedata
 import urllib.error
 import urllib.request
@@ -38,10 +39,24 @@ TEXTOS = DATOS / "textos"
 
 BOGOTA = timezone(timedelta(hours=-5), "Bogotá")
 AGENTE = "Mozilla/5.0 (compatible; AlertaConvocatorias/1.0; +https://github.com/Estado-X/alerta-convocatorias-colombia)"
-TIEMPO_ESPERA = 40
+TIEMPO_ESPERA = 40      # segundos por cada lectura de la red
+TIEMPO_TOTAL = 90       # segundos como máximo para descargar una página completa
+TAMANO_MAXIMO = 8_000_000
 MAX_CAMBIOS = 300
 MAX_LINEAS_AVISO = 20
-SITIO = os.environ.get("SITIO_URL", "https://estado-x.github.io/alerta-convocatorias-colombia/")
+CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
+
+
+def _sitio() -> str:
+    """Dirección de la página: SITIO_URL si existe; si no, la de GitHub Pages del repo."""
+    if os.environ.get("SITIO_URL"):
+        return os.environ["SITIO_URL"]
+    repo = os.environ.get("GITHUB_REPOSITORY", "Estado-X/alerta-convocatorias-colombia")
+    dueno, _, nombre = repo.partition("/")
+    return f"https://{dueno.lower()}.github.io/{nombre}/"
+
+
+SITIO = _sitio()
 
 # Líneas que cambian solas y no dicen nada (contadores, horas de la página, etc.).
 RUIDO = [
@@ -49,7 +64,8 @@ RUIDO = [
     for p in (
         r"^hace \d+ (segundos?|minutos?|horas?|d[ií]as?)$",
         r"^\d+ (visitas|vistas|views)$",
-        r"^(última|ultima) actualizaci[oó]n",
+        r"^(visitas|vistas|views)\s*:?\s*\d+",
+        r"(última|ultima) actualizaci[oó]n",
         r"^(cargando|loading)\b",
         r"^copyright\b|^©",
     )
@@ -70,9 +86,23 @@ socket.getaddrinfo = _solo_ipv4
 
 def descargar(url: str) -> str:
     pedido = urllib.request.Request(url, headers={"User-Agent": AGENTE, "Accept-Language": "es-CO,es;q=0.9"})
+    limite = time.monotonic() + TIEMPO_TOTAL
+    partes: list[bytes] = []
+    leidos = 0
     with urllib.request.urlopen(pedido, timeout=TIEMPO_ESPERA) as resp:
-        crudo = resp.read(8_000_000)
-        juego = resp.headers.get_content_charset() or "utf-8"
+        while leidos < TAMANO_MAXIMO:
+            if time.monotonic() > limite:
+                raise TimeoutError(f"la página tardó más de {TIEMPO_TOTAL} s en llegar")
+            trozo = resp.read(65_536)
+            if not trozo:
+                break
+            partes.append(trozo)
+            leidos += len(trozo)
+        juego = resp.headers.get_content_charset()
+    crudo = b"".join(partes)
+    if not juego:  # sin charset en el encabezado: se busca en <meta>
+        meta = re.search(rb"<meta[^>]+charset=[\"']?([A-Za-z0-9_\-]+)", crudo[:8192], re.I)
+        juego = meta.group(1).decode("ascii") if meta else "utf-8"
     try:
         return crudo.decode(juego, errors="replace")
     except LookupError:
@@ -121,7 +151,7 @@ def lineas_visibles(pagina: str, palabras: list[str]) -> list[str]:
     vistas: set[str] = set()
     salida: list[str] = []
     for linea in "".join(lector.partes).split("\n"):
-        linea = re.sub(r"\s+", " ", html.unescape(linea)).strip()
+        linea = re.sub(r"\s+", " ", CONTROL.sub(" ", html.unescape(linea))).strip()
         if len(linea) < 4 or any(r.search(linea) for r in RUIDO):
             continue
         if palabras and not any(p in sin_tildes(linea) for p in palabras):
@@ -166,6 +196,7 @@ def escribir(ruta: Path, contenido: str) -> None:
 
 def leer_fuentes() -> list[dict]:
     fuentes = []
+    usados: set[str] = set()
     for numero, linea in enumerate(FUENTES.read_text(encoding="utf-8").splitlines(), 1):
         linea = linea.strip()
         if not linea or linea.startswith("#"):
@@ -175,7 +206,15 @@ def leer_fuentes() -> list[dict]:
             print(f"fuentes.txt, línea {numero}: no la entiendo, la salto ({linea[:60]})", file=sys.stderr)
             continue
         palabras = [sin_tildes(p.strip()) for p in partes[2].split(",") if p.strip()] if len(partes) > 2 else []
-        fuentes.append({"nombre": partes[0], "url": partes[1], "palabras": palabras, "slug": slug(partes[0])})
+        base = slug(partes[0])
+        nombre_archivo, n = base, 2
+        while nombre_archivo in usados:  # dos nombres parecidos no se pisan el archivo
+            nombre_archivo = f"{base}-{n}"
+            n += 1
+        if nombre_archivo != base:
+            print(f"fuentes.txt, línea {numero}: el nombre se parece a otro; lo guardo como {nombre_archivo}", file=sys.stderr)
+        usados.add(nombre_archivo)
+        fuentes.append({"nombre": partes[0], "url": partes[1], "palabras": palabras, "slug": nombre_archivo})
     return fuentes
 
 
@@ -186,12 +225,15 @@ def abrir_aviso(cambio: dict) -> str | None:
     repo = os.environ.get("GITHUB_REPOSITORY")
     if not token or not repo or os.environ.get("AVISOS_GITHUB", "si").lower() in ("no", "0", "false"):
         return None
-    lineas = "\n".join(f"- {l}" for l in cambio["agregadas"][:MAX_LINEAS_AVISO]) or "- (solo desaparecieron líneas)"
+    # El texto viene de páginas de terceros: va dentro de un bloque de código para que
+    # GitHub no lo convierta en menciones (@cuenta), referencias (repo#1) ni enlaces.
+    seguras = [l.replace("`", "'") for l in cambio["agregadas"][:MAX_LINEAS_AVISO]]
+    lineas = "```text\n" + ("\n".join(seguras) or "(solo desaparecieron líneas)") + "\n```"
     mas = cambio["agregadas_n"] - min(cambio["agregadas_n"], MAX_LINEAS_AVISO)
     cuerpo = (
-        f"**{cambio['nombre']}** cambió en la revisión del {cambio['fecha_texto']}.\n\n"
+        f"**{cambio['nombre']}** cambió (revisión del {cambio['fecha_texto']}).\n\n"
         f"Página: {cambio['url']}\n\n"
-        f"Líneas nuevas ({cambio['agregadas_n']}):\n{lineas}\n"
+        f"Líneas nuevas ({cambio['agregadas_n']}):\n\n{lineas}\n"
         + (f"\n…y {mas} más.\n" if mas > 0 else "")
         + f"\nLíneas que ya no están: {cambio['quitadas_n']}.\n\n"
         f"Abre la página oficial para leer la convocatoria completa: este aviso solo dice que algo cambió.\n\n"
@@ -212,8 +254,8 @@ def abrir_aviso(cambio: dict) -> str | None:
     try:
         with urllib.request.urlopen(pedido, timeout=TIEMPO_ESPERA) as resp:
             return json.loads(resp.read()).get("html_url")
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as error:
-        print(f"No pude abrir el aviso de {cambio['nombre']}: {error}", file=sys.stderr)
+    except Exception as error:  # un aviso que falla no tumba la corrida
+        print(f"No pude abrir el aviso de {cambio['nombre']}: {type(error).__name__}: {error}", file=sys.stderr)
         return None
 
 
@@ -240,6 +282,7 @@ def feed(cambios: list[dict], ahora: datetime) -> str:
         '<feed xmlns="http://www.w3.org/2005/Atom">\n'
         "  <title>Alerta de convocatorias · Estado X</title>\n"
         f"  <link href=\"{x(SITIO)}\"/>\n"
+        f"  <link rel=\"self\" href=\"{x(SITIO + 'data/feed.xml')}\"/>\n"
         f"  <id>{x(SITIO)}</id>\n"
         f"  <updated>{ahora.isoformat(timespec='seconds')}</updated>\n"
         "  <author><name>Estado X</name></author>\n"
@@ -279,7 +322,9 @@ def main() -> int:
         archivo = TEXTOS / f"{fuente['slug']}.txt"
         try:
             lineas = lineas_visibles(descargar(fuente["url"]), fuente["palabras"])
-            if not lineas:
+            # Con «palabras», que hoy no haya líneas que coincidan es normal: se guarda vacío
+            # y la primera vez que aparezcan sí habrá aviso. Sin «palabras», es un error.
+            if not lineas and not fuente["palabras"]:
                 raise ValueError("la página no trae texto legible (¿carga todo con JavaScript?)")
         except Exception as error:  # una fuente que falla no frena a las demás
             mensaje = f"{type(error).__name__}: {error}"[:200]
@@ -292,7 +337,7 @@ def main() -> int:
             estado.append(ficha)
             continue
 
-        anteriores = archivo.read_text(encoding="utf-8").splitlines() if archivo.exists() else None
+        anteriores = [l for l in archivo.read_text(encoding="utf-8").splitlines() if l] if archivo.exists() else None
         ficha["lineas"] = len(lineas)
         if anteriores is None:
             ficha["estado"] = "nueva"  # primera revisión: queda como base, sin aviso
@@ -315,7 +360,7 @@ def main() -> int:
                 nuevos.append(cambio)
                 ficha.update(ultimo_cambio=ahora.isoformat(), ultimo_cambio_texto=fecha_texto(ahora),
                              ultimas_agregadas=agregadas[:8])
-        escribir(archivo, "\n".join(lineas) + "\n")
+        escribir(archivo, "\n".join(lineas) + ("\n" if lineas else ""))
         estado.append(ficha)
 
     cambios = (nuevos + cambios)[:MAX_CAMBIOS]
