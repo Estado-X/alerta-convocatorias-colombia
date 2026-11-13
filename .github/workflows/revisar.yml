@@ -1,0 +1,42 @@
+name: Revisar convocatorias
+
+# LANZAMIENTO: para prender la revisión diaria, quitar "# " al inicio de las dos líneas de schedule.
+on:
+  # schedule:
+  #   - cron: "0 11 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: revisar-convocatorias
+  cancel-in-progress: false
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Revisar las páginas de fuentes.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Para no abrir avisos en GitHub, cambia "si" por "no".
+          AVISOS_GITHUB: "si"
+        run: python -I scripts/revisar.py
+      - name: Guardar los resultados
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data
+          if git diff --cached --quiet; then
+            echo "Sin cambios que guardar."
+          else
+            git commit -m "Revisión de convocatorias $(date -u +%Y-%m-%d)"
+            git push
+          fi

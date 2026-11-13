@@ -1,0 +1,19 @@
+# Alerta de convocatorias · páginas que se vigilan
+#
+# Una página por línea, así:
+#   Nombre | dirección | palabras (opcional)
+#
+# «palabras»: si las escribes, separadas por comas, solo se comparan las líneas
+# de la página que tengan alguna de ellas. Sirve cuando una página cambia mucho
+# por cosas que no te importan.
+# Las líneas que empiezan con # no se leen.
+
+MinCiencias · convocatorias | https://minciencias.gov.co/convocatorias/todas
+MinTIC · convocatorias | https://www.mintic.gov.co/portal/inicio/Sala-de-prensa/Convocatorias/
+APC-Colombia · fondos de cooperación | https://www.apccolombia.gov.co/fondos-cooperacion
+APC-Colombia · comisiones mixtas sur-sur | https://www.apccolombia.gov.co/convocatorias-comisiones-mixtas-de-cooperacion-entre-paises-del-sur-global
+ICETEX · becas vigentes en el exterior | https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes
+Fondo Acción · convocatorias | https://fondoaccion.org/convocatorias/
+Fondo Emprender (SENA) | https://www.fondoemprender.com/SitePages/Home.aspx
+Fondo Multidonante de la ONU para la Paz · convocatorias | https://fondoonucol.org/convocatorias/
+Fundación Bolívar Davivienda · convocatorias | https://www.fundacionbolivardavivienda.org/convocatorias/

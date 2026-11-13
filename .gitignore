@@ -1,0 +1,73 @@
+# ─────────────────────────────────────────────────────────────
+# .gitignore base de Estado X · _seguridad/kit_repo · v1 (10 oct 2026)
+# Copia este archivo a la raíz de cada repo y agrega abajo lo propio.
+# Ojo: .gitignore solo frena a git (Claude). La web de GitHub sube
+# lo que arrastres, esté o no aquí.
+# ─────────────────────────────────────────────────────────────
+
+# Secretos y llaves: NUNCA al repo
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+credentials*.json
+service-account*.json
+.npmrc
+.pypirc
+.git-credentials
+secrets/
+
+# Vercel local (trae el ID del proyecto y, a veces, variables bajadas)
+.vercel/
+
+# Datos de personas y material interno (Ley 1581 y producto)
+*estudiantes*.xlsx
+*estudiantes*.csv
+*cohorte*.xlsx
+*contactos*.xlsx
+*CEREBRO*
+*PROMPT_CANONICO*
+*ESTUDIO*
+CRUCE_*
+
+# Notas de trabajo y respaldos
+PARA_SUBIR*
+*.bak
+*.bak-*
+*.bak.*
+*.old
+*.orig
+*~
+_archivo/
+_no_publicar/
+_to_delete/
+
+# Sistema y editores (Windows primero)
+Thumbs.db
+desktop.ini
+.DS_Store
+*.swp
+.vscode/
+.idea/
+
+# Dependencias y construcciones
+node_modules/
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+.next/
+
+# Claude: los permisos del equipo van en .claude/settings.json (sí se sube);
+# lo personal de cada quien, no.
+.claude/settings.local.json
+
+# Propio del repo
+*.tmp
+__pycache__/
