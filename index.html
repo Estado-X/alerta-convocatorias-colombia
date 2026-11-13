@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Alerta de convocatorias · Estado X</title>
+<meta name="description" content="Cada mañana revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Sin cuentas ni formularios.">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f2ebdc">
+<link rel="canonical" href="https://estado-x.github.io/alerta-convocatorias-colombia/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="es_CO">
+<meta property="og:site_name" content="Alerta de convocatorias · Consultorio X de Estado X">
+<meta property="og:url" content="https://estado-x.github.io/alerta-convocatorias-colombia/">
+<meta property="og:title" content="Alerta de convocatorias">
+<meta property="og:description" content="Cada mañana revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Sin cuentas ni formularios.">
+<meta property="og:image" content="https://estado-x.github.io/alerta-convocatorias-colombia/docs/compartir.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Alerta de convocatorias. Herramienta abierta · Consultorio X de Estado X">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Alerta de convocatorias">
+<meta name="twitter:description" content="Cada mañana revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció.">
+<meta name="twitter:image" content="https://estado-x.github.io/alerta-convocatorias-colombia/docs/compartir.png">
+<link rel="alternate" type="application/atom+xml" title="Alerta de convocatorias · Estado X" href="data/feed.xml">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="assets/estilos.css">
+</head>
+<body>
+<a class="saltar" href="#cambios">Ir a lo que cambió</a>
+
+<header class="cab">
+  <div class="contenedor cab__in">
+    <div class="cab__texto">
+      <p class="kicker">Herramienta abierta · Consultorio X de Estado X</p>
+      <h1>Alerta de <em>convocatorias</em></h1>
+      <p class="bajada">Cada mañana revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Sin cuentas ni formularios.</p>
+      <div class="cab__accion">
+        <a class="boton" href="#avisos">Recibe los avisos</a>
+        <a class="enlace-fuerte" href="#lista">Haz tu propia lista</a>
+      </div>
+    </div>
+    <div class="pulso" aria-live="polite">
+      <p class="pulso__rev"><span class="punto" id="punto-general" aria-hidden="true"></span><span>Última revisión: <span id="ultima-revision">cargando…</span></span></p>
+      <dl class="pulso__cifras">
+        <div><dt>Páginas vigiladas</dt><dd id="n-fuentes">–</dd></div>
+        <div><dt>Cambios registrados</dt><dd id="n-cambios">–</dd></div>
+      </dl>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="contenedor cuerpo">
+
+    <section class="seccion" id="cambios" aria-labelledby="t-cambios">
+      <div class="seccion__cab">
+        <h2 id="t-cambios">Lo que cambió</h2>
+        <p class="nota">Lo más nuevo, primero. La convocatoria completa siempre está en la página oficial.</p>
+      </div>
+      <div id="lista-cambios" aria-live="polite" aria-busy="true">
+        <p class="aviso">Cargando los cambios…</p>
+      </div>
+    </section>
+
+    <section class="seccion" id="paginas" aria-labelledby="t-paginas">
+      <div class="seccion__cab">
+        <h2 id="t-paginas">Las páginas que vigilamos</h2>
+        <p class="nota">Una revisión al día, en la mañana.</p>
+      </div>
+      <div id="lista-fuentes" aria-live="polite" aria-busy="true">
+        <p class="aviso">Cargando las páginas…</p>
+      </div>
+    </section>
+
+    <noscript><p class="aviso aviso--error">Esta página necesita JavaScript para mostrar el estado de hoy. Los avisos también llegan por el RSS: data/feed.xml</p></noscript>
+
+    <div class="dos">
+      <section class="seccion" id="avisos" aria-labelledby="t-avisos">
+        <div class="seccion__cab"><h2 id="t-avisos">Recibe los avisos</h2></div>
+        <p class="entrada">Dos caminos, sin formularios.</p>
+        <ul class="caminos">
+          <li class="camino">
+            <h3>Por RSS</h3>
+            <p>Ponlo en tu lector de noticias y cada cambio te aparece ahí.</p>
+            <a class="boton boton--linea" href="data/feed.xml">Abrir el RSS</a>
+          </li>
+          <li class="camino">
+            <h3>Por correo de GitHub</h3>
+            <p>Con una cuenta gratis de GitHub, entra al repo, pulsa <span class="tecla">Watch</span> → <span class="tecla">Custom</span> → <span class="tecla">Issues</span>, y te llega un correo cada vez que una página cambia.</p>
+            <a class="boton boton--linea" href="https://github.com/Estado-X/alerta-convocatorias-colombia" target="_blank" rel="noopener">Ir al repo en GitHub</a>
+          </li>
+        </ul>
+      </section>
+
+      <section class="seccion" id="lista" aria-labelledby="t-lista">
+        <div class="seccion__cab"><h2 id="t-lista">Haz tu propia lista</h2></div>
+        <p class="entrada">Vigila las páginas que le importan a tu equipo, en cuatro pasos.</p>
+        <ol class="pasos">
+          <li class="paso"><span class="paso__num" aria-hidden="true">1</span><p><span class="sr">1. </span>En el <a href="https://github.com/Estado-X/alerta-convocatorias-colombia" target="_blank" rel="noopener">repo</a>, <span class="tecla">Use this template</span> para crear tu copia (gratis).</p></li>
+          <li class="paso"><span class="paso__num" aria-hidden="true">2</span><div><p><span class="sr">2. </span>Abre <code>fuentes.txt</code> y escribe tus páginas, una por línea:</p><p class="ejemplo"><code>Nombre | dirección</code></p></div></li>
+          <li class="paso"><span class="paso__num" aria-hidden="true">3</span><p><span class="sr">3. </span>En la pestaña <span class="tecla">Actions</span>, activa los flujos y prende la revisión diaria.</p></li>
+          <li class="paso"><span class="paso__num" aria-hidden="true">4</span><p><span class="sr">4. </span>Pulsa <span class="tecla">Watch</span> para recibir los avisos por correo.</p></li>
+        </ol>
+      </section>
+    </div>
+
+    <section class="seccion limites" aria-labelledby="t-no">
+      <div class="seccion__cab"><h2 id="t-no">Lo que no hace</h2></div>
+      <div class="limites__texto">
+        <p class="limites__uno">No lee ni resume las convocatorias, no te dice si una encaja con tu proyecto y no postula por ti.</p>
+        <p>Solo avisa que una página cambió: la convocatoria completa siempre está en la página oficial. No sirve para páginas que piden iniciar sesión o que cargan todo con JavaScript.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <section class="hablamos oscuro" aria-labelledby="t-hablamos">
+    <div class="contenedor hablamos__in">
+      <p class="kicker">Consultorio X de Estado X</p>
+      <h2 id="t-hablamos">¿Hablamos de tu caso?</h2>
+      <p>Esta alerta es una muestra. En Consultorio X montamos con tu equipo el ciclo completo de una convocatoria: buscar, leer los términos de referencia, ordenar aliados, traducir la propuesta y preparar el informe al financiador.</p>
+      <a class="boton boton--claro" href="https://www.linkedin.com/in/juanperezcuervo/" target="_blank" rel="noopener">Escríbeme en LinkedIn</a>
+      <p class="firma">Juan Camilo Pérez Cuervo · Head de Alianzas y Proyectos Estratégicos de Estado X</p>
+    </div>
+  </section>
+</main>
+
+<footer class="pie oscuro">
+  <div class="contenedor pie__in">
+    <p>Hecho por Estado X · licencia MIT · Inspirado en <a href="https://github.com/dgtlmoon/changedetection.io" target="_blank" rel="noopener">changedetection.io</a>, de dgtlmoon (licencia Apache-2.0)</p>
+    <p>Los datos y las convocatorias son de cada entidad.</p>
+    <p><a href="https://estadox.com" target="_blank" rel="noopener">estadox.com</a> · Esta página no tiene rastreadores.</p>
+  </div>
+</footer>
+
+<script src="assets/alerta.js" defer></script>
+</body>
+</html>
