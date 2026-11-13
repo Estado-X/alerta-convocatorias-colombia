@@ -1,9 +1,9 @@
 name: Revisar convocatorias
 
-# LANZAMIENTO: para prender la revisión diaria, quitar "# " al inicio de las dos líneas de schedule.
+# Revisión diaria a las 6:00 a. m. (hora de Colombia). Para apagarla, poner "# " al inicio de las dos líneas de schedule.
 on:
-  # schedule:
-  #   - cron: "0 11 * * *"
+  schedule:
+    - cron: "0 11 * * *"
   workflow_dispatch:
 
 permissions:
