@@ -1,7 +1,13 @@
 {
-  "fecha": "2026-11-13T18:21:58+00:00",
-  "fecha_texto": "13/11/2026 1:21 p. m.",
+  "fecha": "2026-11-14T16:52:53+00:00",
+  "fecha_texto": "14/11/2026 11:52 a. m.",
   "revisadas": 9,
-  "cambios": 0,
-  "errores": []
+  "cambios": 3,
+  "errores": [
+    {
+      "slug": "mintic-convocatorias",
+      "nombre": "MinTIC · convocatorias",
+      "error": "HTTPError: HTTP Error 522: <none>"
+    }
+  ]
 }
