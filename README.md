@@ -14,7 +14,7 @@ Una herramienta gratis y abierta que revisa una vez al día páginas oficiales d
 
 - Revisa una vez al día las páginas de `fuentes.txt`: hoy, MinCiencias, MinTIC, APC-Colombia (fondos de cooperación y comisiones mixtas sur-sur), ICETEX (becas en el exterior), Fondo Acción, Fondo Emprender, el Fondo Multidonante de la ONU para la Paz y la Fundación Bolívar Davivienda.
 - Muestra cuándo cambió cada página y qué líneas nuevas aparecieron.
-- Tiene una lista aparte de **becas de doctorado**, en Colombia y en el exterior (`fuentes-doctorado.txt`; página https://estado-x.github.io/alerta-convocatorias-colombia/doctorado/): MinCiencias, ICETEX, Colfuturo, Fulbright Colombia, DAAD Colombia y Fundación Carolina. Se revisa con `python scripts/revisar.py --lista doctorado` y sus datos quedan en `data/doctorado/`.
+- Tiene una lista aparte de **becas de doctorado**, en Colombia y en el exterior (`fuentes-doctorado.txt`; página https://estado-x.github.io/alerta-convocatorias-colombia/doctorado/): MinCiencias, ICETEX, Colfuturo, Fulbright Colombia y Fundación Carolina. Se revisa con `python scripts/revisar.py --lista doctorado` y sus datos quedan en `data/doctorado/`.
 - Avisa de tres formas, sin formularios: en la página y por RSS (`data/feed.xml`), sin cuentas, y con un aviso en GitHub que llega por correo a quien siga el repo (con una cuenta gratis de GitHub).
 
 ### Cómo funciona
@@ -48,7 +48,7 @@ Para probar en tu computador: `python scripts/revisar.py` (Python 3.10 o más re
 
 - Inspirada en [changedetection.io](https://github.com/dgtlmoon/changedetection.io), de dgtlmoon (licencia Apache-2.0). La escribimos desde cero, más liviana y sin servidor; no reutiliza su código.
 - Páginas vigiladas: MinCiencias, MinTIC, APC-Colombia, ICETEX, Fondo Acción, Fondo Emprender (SENA), Fondo Multidonante de las Naciones Unidas para el Sostenimiento de la Paz y Fundación Bolívar Davivienda.
-- Lista de becas de doctorado: MinCiencias, ICETEX, Colfuturo, Comisión Fulbright Colombia, DAAD (Servicio Alemán de Intercambio Académico) y Fundación Carolina.
+- Lista de becas de doctorado: MinCiencias, ICETEX, Colfuturo, Comisión Fulbright Colombia y Fundación Carolina.
 
 ### Hecho por Estado X
 

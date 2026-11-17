@@ -8,6 +8,9 @@
 # Una página por línea, así:
 #   Nombre | dirección | palabras (opcional)
 # Las líneas que empiezan con # no se leen.
+#
+# Fuera (17 nov 2026): DAAD Colombia (su página bloquea a los servidores de GitHub, error 403)
+# y la OEA (su página de becas no respondía).
 
 MinCiencias · convocatorias de formación | https://minciencias.gov.co/convocatorias/todas | doctor, beca, formacion, maestria
 MinCiencias · formación y vinculación | https://minciencias.gov.co/oferta_institucional/formacion_vinculacion
@@ -16,5 +19,4 @@ ICETEX · calendario de posgrado en el exterior | https://web.icetex.gov.co/cale
 ICETEX · becas vigentes en el exterior | https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes
 Colfuturo · programa crédito-beca | https://www.colfuturo.org/programas/credito-beca/informacion-general
 Fulbright Colombia · programas | https://fulbright.edu.co/programas/
-DAAD Colombia · buscador de becas | https://www.daad.co/es/becas-2/buscador-de-becas/
 Fundación Carolina · becas de doctorado | https://www.fundacioncarolina.es/formacion/becas-de-doctorado-y-estancias-cortas-postdoctorales/
