@@ -1,0 +1,20 @@
+# Lista: Becas de doctorado
+#
+# Lista aparte de la alerta: páginas oficiales de becas y créditos para hacer
+# un doctorado, en Colombia y en el exterior. Se revisa con
+#   python scripts/revisar.py --lista doctorado
+# y sus resultados quedan en data/doctorado/. La página es doctorado/index.html.
+#
+# Una página por línea, así:
+#   Nombre | dirección | palabras (opcional)
+# Las líneas que empiezan con # no se leen.
+
+MinCiencias · convocatorias de formación | https://minciencias.gov.co/convocatorias/todas | doctor, beca, formacion, maestria
+MinCiencias · formación y vinculación | https://minciencias.gov.co/oferta_institucional/formacion_vinculacion
+ICETEX · calendario de posgrado en el país | https://web.icetex.gov.co/calendario-de-posgrado-pais
+ICETEX · calendario de posgrado en el exterior | https://web.icetex.gov.co/calendario-de-posgrado-exterior
+ICETEX · becas vigentes en el exterior | https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes
+Colfuturo · programa crédito-beca | https://www.colfuturo.org/programas/credito-beca/informacion-general
+Fulbright Colombia · programas | https://fulbright.edu.co/programas/
+DAAD Colombia · buscador de becas | https://www.daad.co/es/becas-2/buscador-de-becas/
+Fundación Carolina · becas de doctorado | https://www.fundacioncarolina.es/formacion/becas-de-doctorado-y-estancias-cortas-postdoctorales/

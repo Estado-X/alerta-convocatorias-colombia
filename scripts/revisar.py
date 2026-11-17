@@ -12,6 +12,10 @@ Escribe data/estado.json, data/cambios.json, data/corrida.json y data/feed.xml.
 Si corre en GitHub Actions con permiso para abrir avisos (issues), abre uno
 por cada página que cambió; quien siga el repo lo recibe por correo.
 
+Listas aparte: `python scripts/revisar.py --lista doctorado` lee
+fuentes-doctorado.txt y escribe en data/doctorado/. Si el archivo no existe,
+termina sin error.
+
 Hecho por Estado X (2026), licencia MIT. Inspirado en changedetection.io,
 de dgtlmoon (licencia Apache-2.0); no reutiliza su código.
 """
@@ -33,8 +37,21 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
-FUENTES = RAIZ / "fuentes.txt"
-DATOS = RAIZ / "data"
+
+
+def _lista() -> str | None:
+    """Nombre de la lista aparte (--lista doctorado), o None para la lista principal."""
+    argumentos = sys.argv[1:]
+    if not argumentos:
+        return None
+    if len(argumentos) == 2 and argumentos[0] == "--lista" and re.fullmatch(r"[a-z0-9][a-z0-9-]{0,39}", argumentos[1]):
+        return argumentos[1]
+    sys.exit("Uso: python scripts/revisar.py [--lista nombre-en-minusculas]")
+
+
+LISTA = _lista()
+FUENTES = RAIZ / (f"fuentes-{LISTA}.txt" if LISTA else "fuentes.txt")
+DATOS = RAIZ / "data" / LISTA if LISTA else RAIZ / "data"
 TEXTOS = DATOS / "textos"
 
 BOGOTA = timezone(timedelta(hours=-5), "Bogotá")
@@ -57,6 +74,21 @@ def _sitio() -> str:
 
 
 SITIO = _sitio()
+PAGINA = SITIO + (f"{LISTA}/" if LISTA else "")          # página que muestra esta lista
+RUTA_FEED = f"data/{LISTA}/feed.xml" if LISTA else "data/feed.xml"
+PREFIJO_AVISO = f"{LISTA.replace('-', ' ').capitalize()} · " if LISTA else ""
+
+
+def titulo_lista() -> str:
+    """Título de la lista: la línea «# Lista: …» de su archivo de fuentes, si la tiene."""
+    try:
+        for linea in FUENTES.read_text(encoding="utf-8").splitlines():
+            encontrado = re.match(r"#\s*Lista:\s*(.+)$", linea.strip())
+            if encontrado:
+                return encontrado.group(1).strip()
+    except FileNotFoundError:
+        pass
+    return "Alerta de convocatorias"
 
 # Líneas que cambian solas y no dicen nada (contadores, horas de la página, etc.).
 RUIDO = [
@@ -237,9 +269,10 @@ def abrir_aviso(cambio: dict) -> str | None:
         + (f"\n…y {mas} más.\n" if mas > 0 else "")
         + f"\nLíneas que ya no están: {cambio['quitadas_n']}.\n\n"
         f"Abre la página oficial para leer la convocatoria completa: este aviso solo dice que algo cambió.\n\n"
-        f"Todas las páginas: {SITIO}"
+        f"Todas las páginas: {PAGINA}"
     )
-    datos = json.dumps({"title": f"Cambió: {cambio['nombre']} · {cambio['fecha_texto'][:10]}", "body": cuerpo}).encode()
+    titulo = f"{PREFIJO_AVISO}Cambió: {cambio['nombre']} · {cambio['fecha_texto'][:10]}"
+    datos = json.dumps({"title": titulo, "body": cuerpo}).encode()
     pedido = urllib.request.Request(
         f"https://api.github.com/repos/{repo}/issues",
         data=datos,
@@ -272,7 +305,7 @@ def feed(cambios: list[dict], ahora: datetime) -> str:
             "  <entry>\n"
             f"    <title>{x('Cambió: ' + c['nombre'])}</title>\n"
             f"    <link href=\"{x(c['url'])}\"/>\n"
-            f"    <id>tag:estado-x.github.io,2026:{x(c['slug'])}:{x(c['fecha'])}</id>\n"
+            f"    <id>tag:estado-x.github.io,2026:{x((LISTA + ':') if LISTA else '')}{x(c['slug'])}:{x(c['fecha'])}</id>\n"
             f"    <updated>{x(c['fecha'])}</updated>\n"
             f"    <summary>{x(resumen)}</summary>\n"
             "  </entry>"
@@ -280,10 +313,10 @@ def feed(cambios: list[dict], ahora: datetime) -> str:
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<feed xmlns="http://www.w3.org/2005/Atom">\n'
-        "  <title>Alerta de convocatorias · Estado X</title>\n"
-        f"  <link href=\"{x(SITIO)}\"/>\n"
-        f"  <link rel=\"self\" href=\"{x(SITIO + 'data/feed.xml')}\"/>\n"
-        f"  <id>{x(SITIO)}</id>\n"
+        f"  <title>{x(titulo_lista())} · Estado X</title>\n"
+        f"  <link href=\"{x(PAGINA)}\"/>\n"
+        f"  <link rel=\"self\" href=\"{x(SITIO + RUTA_FEED)}\"/>\n"
+        f"  <id>{x(PAGINA)}</id>\n"
         f"  <updated>{ahora.isoformat(timespec='seconds')}</updated>\n"
         "  <author><name>Estado X</name></author>\n"
         + "\n".join(entradas)
@@ -295,6 +328,9 @@ def feed(cambios: list[dict], ahora: datetime) -> str:
 
 def main() -> int:
     ahora = datetime.now(timezone.utc).replace(microsecond=0)
+    if not FUENTES.exists():
+        print(f"No encontré {FUENTES.name}; no hay nada que revisar en esta lista.")
+        return 0
     fuentes = leer_fuentes()
     estado_previo = {f["slug"]: f for f in leer_json(DATOS / "estado.json", {}).get("fuentes", [])}
     cambios = leer_json(DATOS / "cambios.json", {}).get("cambios", [])

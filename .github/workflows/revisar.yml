@@ -1,6 +1,7 @@
 name: Revisar convocatorias
 
-# Revisión diaria a las 6:00 a. m. (hora de Colombia). Para apagarla, poner "# " al inicio de las dos líneas de schedule.
+# Revisión una vez al día: está programada a las 6:00 a. m. (hora de Colombia), pero GitHub puede correrla
+# varias horas después cuando tiene mucha carga. Para apagarla, poner "# " al inicio de las dos líneas de schedule.
 on:
   schedule:
     - cron: "0 11 * * *"
@@ -29,6 +30,11 @@ jobs:
           # Para no abrir avisos en GitHub, cambia "si" por "no".
           AVISOS_GITHUB: "si"
         run: python -I scripts/revisar.py
+      - name: Revisar la lista aparte de becas de doctorado (fuentes-doctorado.txt)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AVISOS_GITHUB: "si"
+        run: python -I scripts/revisar.py --lista doctorado
       - name: Guardar los resultados
         run: |
           git config user.name "github-actions[bot]"

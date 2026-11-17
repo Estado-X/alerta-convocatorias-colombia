@@ -7,6 +7,8 @@
 
   var MAX_LINEAS = 5;      // líneas nuevas que se muestran por cambio
   var MAX_CAMBIOS = 10;    // cambios visibles antes de «Ver los anteriores»
+  // Carpeta de los datos: la lista principal usa data/; una lista aparte la indica en <body data-datos="…">.
+  var DATOS = document.body.getAttribute('data-datos') || 'data/';
 
   function $(id) { return document.getElementById(id); }
 
@@ -207,7 +209,7 @@
 
   /* ---------- Arranque ---------- */
 
-  var estadoListo = pedir('data/estado.json').then(function (estado) {
+  var estadoListo = pedir(DATOS + 'estado.json').then(function (estado) {
     pintarFuentes(estado);
     return estado;
   }).catch(function () {
@@ -218,7 +220,7 @@
   });
 
   estadoListo.then(function (estado) {
-    return pedir('data/cambios.json').then(function (datos) {
+    return pedir(DATOS + 'cambios.json').then(function (datos) {
       pintarCambios(datos, estado);
     }).catch(function () {
       fallo('lista-cambios', 'No pudimos cargar la lista de cambios. Recarga en un momento; si sigue igual, los avisos siguen llegando por el RSS y por GitHub.');
