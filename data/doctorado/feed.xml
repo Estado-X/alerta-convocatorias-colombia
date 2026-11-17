@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Becas de doctorado · Estado X</title>
+  <link href="https://estado-x.github.io/alerta-convocatorias-colombia/doctorado/"/>
+  <link rel="self" href="https://estado-x.github.io/alerta-convocatorias-colombia/data/doctorado/feed.xml"/>
+  <id>https://estado-x.github.io/alerta-convocatorias-colombia/doctorado/</id>
+  <updated>2026-11-17T21:01:50+00:00</updated>
+  <author><name>Estado X</name></author>
+
+</feed>
