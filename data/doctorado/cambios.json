@@ -1,3 +1,19 @@
 {
-  "cambios": []
+  "cambios": [
+    {
+      "slug": "icetex-becas-vigentes-en-el-exterior",
+      "nombre": "ICETEX · becas vigentes en el exterior",
+      "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
+      "fecha": "2026-11-18T19:17:13+00:00",
+      "fecha_texto": "18/11/2026 2:17 p. m.",
+      "agregadas": [
+        "Fecha de actualización: 18 de noviembre de 2026",
+        "Doctorados presenciales en diferentes áreas en China (2027)",
+        "Maestrías presenciales en diferentes áreas en China (2027)"
+      ],
+      "agregadas_n": 3,
+      "quitadas_n": 1,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/6"
+    }
+  ]
 }

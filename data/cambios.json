@@ -1,6 +1,38 @@
 {
   "cambios": [
     {
+      "slug": "icetex-becas-vigentes-en-el-exterior",
+      "nombre": "ICETEX · becas vigentes en el exterior",
+      "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
+      "fecha": "2026-11-18T19:17:02+00:00",
+      "fecha_texto": "18/11/2026 2:17 p. m.",
+      "agregadas": [
+        "Fecha de actualización: 18 de noviembre de 2026",
+        "Doctorados presenciales en diferentes áreas en China (2027)",
+        "Maestrías presenciales en diferentes áreas en China (2027)"
+      ],
+      "agregadas_n": 3,
+      "quitadas_n": 1,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/4"
+    },
+    {
+      "slug": "fundacion-bolivar-davivienda-convocatorias",
+      "nombre": "Fundación Bolívar Davivienda · convocatorias",
+      "url": "https://www.fundacionbolivardavivienda.org/convocatorias/",
+      "fecha": "2026-11-18T19:17:02+00:00",
+      "fecha_texto": "18/11/2026 2:17 p. m.",
+      "agregadas": [
+        "Convocatoria Nuevo Mundo 2027",
+        "Fecha de cierre: 18 de diciembre de 2026",
+        "¿Lidera una organización o proceso de formación musical en Colombia? ¡Esta oportunidad es para su institución! Postúlese y fortalezca su proceso con el acompañamiento pedagógico a través de #LaJoven Creando Lazos.",
+        "Dirigida a: Procesos de formación musical en Colombia",
+        "Fecha de cierre: 18 de enero de 2027"
+      ],
+      "agregadas_n": 5,
+      "quitadas_n": 5,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/5"
+    },
+    {
       "slug": "apc-colombia-fondos-de-cooperacion",
       "nombre": "APC-Colombia · fondos de cooperación",
       "url": "https://www.apccolombia.gov.co/fondos-cooperacion",
