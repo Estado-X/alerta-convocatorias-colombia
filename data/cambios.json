@@ -1,6 +1,21 @@
 {
   "cambios": [
     {
+      "slug": "fundacion-bolivar-davivienda-convocatorias",
+      "nombre": "Fundación Bolívar Davivienda · convocatorias",
+      "url": "https://www.fundacionbolivardavivienda.org/convocatorias/",
+      "fecha": "2026-11-19T19:24:23+00:00",
+      "fecha_texto": "19/11/2026 2:24 p. m.",
+      "agregadas": [
+        "Cultura Futura 2027 – convocatoria dirigida",
+        "¿Su organización cultural está lista para crecer? Cultura Futura 2027 ofrece financiación y mentoría para fortalecer su gestión, sostenibilidad y capacidades. Conozca esta oportunidad e identifique cómo impulsar el futuro de su organización.",
+        "Dirigida a: Organizaciones culturales y creativas. Participación exclusiva por invitación"
+      ],
+      "agregadas_n": 3,
+      "quitadas_n": 0,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/7"
+    },
+    {
       "slug": "icetex-becas-vigentes-en-el-exterior",
       "nombre": "ICETEX · becas vigentes en el exterior",
       "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
