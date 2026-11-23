@@ -1,6 +1,19 @@
 {
   "cambios": [
     {
+      "slug": "colfuturo-programa-credito-beca",
+      "nombre": "Colfuturo · programa crédito-beca",
+      "url": "https://www.colfuturo.org/programas/credito-beca/informacion-general",
+      "fecha": "2026-11-23T22:28:59+00:00",
+      "fecha_texto": "23/11/2026 5:28 p. m.",
+      "agregadas": [
+        "Actualiza tus datos"
+      ],
+      "agregadas_n": 1,
+      "quitadas_n": 0,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/8"
+    },
+    {
       "slug": "icetex-becas-vigentes-en-el-exterior",
       "nombre": "ICETEX · becas vigentes en el exterior",
       "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
