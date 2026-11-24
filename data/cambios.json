@@ -1,6 +1,19 @@
 {
   "cambios": [
     {
+      "slug": "icetex-becas-vigentes-en-el-exterior",
+      "nombre": "ICETEX · becas vigentes en el exterior",
+      "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
+      "fecha": "2026-11-24T21:01:42+00:00",
+      "fecha_texto": "24/11/2026 4:01 p. m.",
+      "agregadas": [
+        "Beca del 100 % en matrícula para curso corto presencial para servidores públicos en Singapur: Inclusivity in Multicultural Societies - Singapore Cooperation Programme"
+      ],
+      "agregadas_n": 1,
+      "quitadas_n": 1,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/9"
+    },
+    {
       "slug": "fundacion-bolivar-davivienda-convocatorias",
       "nombre": "Fundación Bolívar Davivienda · convocatorias",
       "url": "https://www.fundacionbolivardavivienda.org/convocatorias/",
