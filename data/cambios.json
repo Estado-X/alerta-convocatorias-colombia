@@ -1,6 +1,30 @@
 {
   "cambios": [
     {
+      "slug": "minciencias-convocatorias",
+      "nombre": "MinCiencias · convocatorias",
+      "url": "https://minciencias.gov.co/convocatorias/todas",
+      "fecha": "2026-11-25T20:24:42+00:00",
+      "fecha_texto": "25/11/2026 3:24 p. m.",
+      "agregadas": [],
+      "agregadas_n": 0,
+      "quitadas_n": 1,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/11"
+    },
+    {
+      "slug": "icetex-becas-vigentes-en-el-exterior",
+      "nombre": "ICETEX · becas vigentes en el exterior",
+      "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
+      "fecha": "2026-11-25T20:24:42+00:00",
+      "fecha_texto": "25/11/2026 3:24 p. m.",
+      "agregadas": [
+        "UNPAD Global Scholarship (UGS) Masters Degree Track 2027"
+      ],
+      "agregadas_n": 1,
+      "quitadas_n": 1,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/12"
+    },
+    {
       "slug": "icetex-becas-vigentes-en-el-exterior",
       "nombre": "ICETEX · becas vigentes en el exterior",
       "url": "https://web.icetex.gov.co/becas/becas-para-estudios-en-el-exterior/becas-vigentes",
