@@ -3,25 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="version" content="2">
 <title>Alerta de convocatorias · Estado X</title>
-<meta name="description" content="Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Sin cuentas ni formularios.">
+<meta name="description" content="Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Busca y filtra lo nuevo. Gratis, abierta y sin formularios.">
 <meta name="color-scheme" content="light">
 <meta name="theme-color" content="#f2ebdc">
 <link rel="canonical" href="https://estado-x.github.io/alerta-convocatorias-colombia/">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="es_CO">
-<meta property="og:site_name" content="Alerta de convocatorias · Consultorio X de Estado X">
+<meta property="og:site_name" content="Alerta de convocatorias · Estado X">
 <meta property="og:url" content="https://estado-x.github.io/alerta-convocatorias-colombia/">
 <meta property="og:title" content="Alerta de convocatorias">
-<meta property="og:description" content="Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Sin cuentas ni formularios.">
-<meta property="og:image" content="https://estado-x.github.io/alerta-convocatorias-colombia/docs/compartir.png">
+<meta property="og:description" content="Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Busca y filtra lo nuevo. Gratis y abierta.">
+<meta property="og:image" content="https://estado-x.github.io/alerta-convocatorias-colombia/docs/compartir.png?v=2">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Alerta de convocatorias. Herramienta abierta · Consultorio X de Estado X">
+<meta property="og:image:alt" content="Alerta de convocatorias: una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia. Herramienta abierta y gratis de Estado X.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Alerta de convocatorias">
 <meta name="twitter:description" content="Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció.">
-<meta name="twitter:image" content="https://estado-x.github.io/alerta-convocatorias-colombia/docs/compartir.png">
+<meta name="twitter:image" content="https://estado-x.github.io/alerta-convocatorias-colombia/docs/compartir.png?v=2">
 <link rel="alternate" type="application/atom+xml" title="Alerta de convocatorias · Estado X" href="data/feed.xml">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="assets/estilos.css">
@@ -32,21 +33,22 @@
 <header class="cab">
   <div class="contenedor cab__in">
     <div class="cab__texto">
-      <p class="kicker">Herramienta abierta · Consultorio X de Estado X</p>
       <h1>Alerta de <em>convocatorias</em></h1>
-      <p class="bajada">Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Sin cuentas ni formularios.</p>
+      <p class="bajada">Una vez al día revisamos páginas oficiales de convocatorias, fondos y becas en Colombia y te mostramos cuáles cambiaron y qué apareció. Gratis, abierta y sin formularios.</p>
       <div class="cab__accion">
         <a class="boton" href="#avisos">Recibe los avisos</a>
-        <a class="enlace-fuerte" href="#lista">Haz tu propia lista</a>
         <a class="enlace-fuerte" href="doctorado/">¿Buscas beca de doctorado? Mira esta lista</a>
       </div>
     </div>
     <div class="pulso" aria-live="polite">
-      <p class="pulso__rev"><span class="punto" id="punto-general" aria-hidden="true"></span><span>Última revisión: <span id="ultima-revision">cargando…</span></span></p>
       <dl class="pulso__cifras">
         <div><dt>Páginas vigiladas</dt><dd id="n-fuentes">–</dd></div>
-        <div><dt>Cambios registrados</dt><dd id="n-cambios">–</dd></div>
+        <div><dt>Novedades registradas</dt><dd id="n-cambios">–</dd></div>
       </dl>
+      <div class="pulso__rev">
+        <p><span class="punto" id="punto-general" aria-hidden="true"></span><span>Última revisión: <span id="ultima-revision">cargando…</span></span></p>
+        <p class="nota">La revisión corre una vez al día; GitHub decide la hora exacta.</p>
+      </div>
     </div>
   </div>
 </header>
@@ -59,39 +61,48 @@
         <h2 id="t-cambios">Lo que cambió</h2>
         <p class="nota">Lo más nuevo, primero. La convocatoria completa siempre está en la página oficial.</p>
       </div>
+      <p class="resumen" id="resumen-semana" aria-live="polite"></p>
+      <form class="filtros" id="form-buscar" role="search" aria-label="Buscar en lo que apareció">
+        <label class="filtros__etiqueta" for="buscar">Busca en lo que apareció</label>
+        <input class="filtros__campo" id="buscar" type="search" name="buscar" maxlength="80" autocomplete="off" spellcheck="false" placeholder="beca, paz, mujeres, Cauca…">
+        <div class="chips" id="filtro-tipos" role="group" aria-label="Filtra por tipo" hidden></div>
+        <p class="filtros__cuenta" id="cuenta-filtro" aria-live="polite"></p>
+      </form>
       <div id="lista-cambios" aria-live="polite" aria-busy="true">
         <p class="aviso">Cargando los cambios…</p>
       </div>
+      <div id="sin-novedades" hidden></div>
     </section>
 
     <section class="seccion" id="paginas" aria-labelledby="t-paginas">
       <div class="seccion__cab">
         <h2 id="t-paginas">Las páginas que vigilamos</h2>
-        <p class="nota">Una revisión al día.</p>
+        <p class="nota">Una revisión al día. ¿Falta una? <a href="#colaborar">Proponla</a>.</p>
       </div>
       <div id="lista-fuentes" aria-live="polite" aria-busy="true">
         <p class="aviso">Cargando las páginas…</p>
       </div>
     </section>
 
-    <noscript><p class="aviso aviso--error">Esta página necesita JavaScript para mostrar el estado de hoy. Los avisos también llegan por el RSS: data/feed.xml</p></noscript>
+    <noscript><p class="aviso aviso--error">Esta página necesita JavaScript para mostrar el estado de hoy y para buscar. Los avisos también llegan por el RSS: data/feed.xml</p></noscript>
 
     <div class="dos">
       <section class="seccion" id="avisos" aria-labelledby="t-avisos">
         <div class="seccion__cab"><h2 id="t-avisos">Recibe los avisos</h2></div>
-        <p class="entrada">Dos caminos, sin formularios.</p>
-        <ul class="caminos">
+        <p class="entrada">Dos caminos, sin formularios. Solo te avisamos cuando aparece algo nuevo.</p>
+        <ol class="caminos">
           <li class="camino">
             <h3>Por RSS</h3>
-            <p>Ponlo en tu lector de noticias y cada cambio te aparece ahí.</p>
-            <a class="boton boton--linea" href="data/feed.xml">Abrir el RSS</a>
+            <p>Ponlo en tu lector de noticias y cada novedad te aparece ahí.</p>
+            <p><a class="boton boton--linea" href="data/feed.xml">Abrir el RSS de todo</a></p>
+            <div class="rss-tipos" id="rss-tipos" hidden><p class="nota">O solo un tipo:</p></div>
           </li>
           <li class="camino">
             <h3>Por correo de GitHub</h3>
-            <p>Con una cuenta gratis de GitHub, entra al repo, pulsa <span class="tecla">Watch</span> → <span class="tecla">Custom</span> → <span class="tecla">Issues</span>, y te llega un correo cada vez que una página cambia.</p>
-            <a class="boton boton--linea" href="https://github.com/Estado-X/alerta-convocatorias-colombia" target="_blank" rel="noopener">Ir al repo en GitHub</a>
+            <p>Con una cuenta gratis de GitHub, entra al repo, pulsa <span class="tecla">Watch</span> → <span class="tecla">Custom</span> → <span class="tecla">Issues</span>, y te llega un correo cada vez que aparece algo nuevo. Los avisos se cierran solos a los 30 días.</p>
+            <p><a class="boton boton--linea" href="https://github.com/Estado-X/alerta-convocatorias-colombia" target="_blank" rel="noopener">Ir al repo en GitHub</a></p>
           </li>
-        </ul>
+        </ol>
       </section>
 
       <section class="seccion" id="lista" aria-labelledby="t-lista">
@@ -99,8 +110,8 @@
         <p class="entrada">Vigila las páginas que le importan a tu equipo, en cuatro pasos.</p>
         <ol class="pasos">
           <li class="paso"><span class="paso__num" aria-hidden="true">1</span><p><span class="sr">1. </span>En el <a href="https://github.com/Estado-X/alerta-convocatorias-colombia" target="_blank" rel="noopener">repo</a>, pulsa <span class="tecla">Use this template</span> para crear tu copia (gratis).</p></li>
-          <li class="paso"><span class="paso__num" aria-hidden="true">2</span><div><p><span class="sr">2. </span>Abre <code>fuentes.txt</code> y escribe tus páginas, una por línea:</p><p class="ejemplo"><code>Nombre | dirección</code></p></div></li>
-          <li class="paso"><span class="paso__num" aria-hidden="true">3</span><p><span class="sr">3. </span>En la pestaña <span class="tecla">Actions</span>, activa los flujos y prende la revisión diaria.</p></li>
+          <li class="paso"><span class="paso__num" aria-hidden="true">2</span><div><p><span class="sr">2. </span>Abre <code>fuentes.txt</code> y escribe tus páginas, una por línea. El tipo es opcional:</p><p class="ejemplo"><code>Nombre | dirección | tipo: Becas</code></p></div></li>
+          <li class="paso"><span class="paso__num" aria-hidden="true">3</span><p><span class="sr">3. </span>En la pestaña <span class="tecla">Actions</span>, activa los flujos. La revisión diaria queda prendida.</p></li>
           <li class="paso"><span class="paso__num" aria-hidden="true">4</span><p><span class="sr">4. </span>Pulsa <span class="tecla">Watch</span> para recibir los avisos por correo.</p></li>
         </ol>
       </section>
@@ -116,13 +127,19 @@
 
   </div>
 
-  <section class="hablamos oscuro" aria-labelledby="t-hablamos">
-    <div class="contenedor hablamos__in">
-      <p class="kicker">Consultorio X de Estado X</p>
-      <h2 id="t-hablamos">¿Hablamos de tu caso?</h2>
-      <p>Esta alerta es una muestra. En Consultorio X montamos con tu equipo el ciclo completo de una convocatoria: buscar, leer los términos de referencia, ordenar aliados, traducir la propuesta y preparar el informe al financiador.</p>
-      <a class="boton boton--claro" href="https://www.linkedin.com/in/juanperezcuervo/" target="_blank" rel="noopener">Escríbeme en LinkedIn</a>
-      <p class="firma">Juan Camilo Pérez Cuervo · Head de Alianzas y Proyectos Estratégicos de Estado X</p>
+  <section class="colaborar oscuro" id="colaborar" aria-labelledby="t-colaborar">
+    <div class="contenedor colaborar__in">
+      <div class="colaborar__texto">
+        <p class="kicker">Cómo colaborar</p>
+        <h2 id="t-colaborar">Esta lista es de todos</h2>
+        <p>La alerta es abierta y gratis. Si conoces una página oficial de convocatorias que falta, o ves que una dirección dejó de funcionar, cuéntanos en GitHub: revisamos cada propuesta y, si sirve, entra a la lista para todos.</p>
+      </div>
+      <ul class="colaborar__acciones">
+        <li><a class="boton boton--claro" href="https://github.com/Estado-X/alerta-convocatorias-colombia/issues/new?template=proponer-pagina.yml" target="_blank" rel="noopener">Propón una página</a></li>
+        <li><a class="boton boton--borde-claro" href="https://github.com/Estado-X/alerta-convocatorias-colombia/issues/new?template=direccion-caida.yml" target="_blank" rel="noopener">Arregla una dirección que se cayó</a></li>
+        <li><a class="boton boton--borde-claro" href="#lista">Haz tu propia lista</a></li>
+      </ul>
+      <p class="colaborar__nota">Necesitas una cuenta gratis de GitHub. No pedimos correos ni datos personales. La guía completa está en <a href="https://github.com/Estado-X/alerta-convocatorias-colombia/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">CONTRIBUTING.md</a>.</p>
     </div>
   </section>
 </main>
@@ -135,6 +152,7 @@
   </div>
 </footer>
 
+<script src="assets/filtros.js" defer></script>
 <script src="assets/alerta.js" defer></script>
 </body>
 </html>

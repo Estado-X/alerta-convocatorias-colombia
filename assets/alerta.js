@@ -1,14 +1,19 @@
 /* Alerta de convocatorias · Estado X
-   Lee data/estado.json y data/cambios.json y pinta el tablero.
+   Lee data/estado.json y data/cambios.json y pinta el tablero, con buscador y filtros.
    Los textos vienen de páginas de terceros: siempre textContent, nunca innerHTML.
    Los enlaces de los datos solo se usan si empiezan por https://. */
 (function () {
   'use strict';
 
+  var F = window.AlertaFiltros;
   var MAX_LINEAS = 5;      // líneas nuevas que se muestran por cambio
   var MAX_CAMBIOS = 10;    // cambios visibles antes de «Ver los anteriores»
-  // Carpeta de los datos: la lista principal usa data/; una lista aparte la indica en <body data-datos="…">.
+  // Carpeta de los datos y lista de fuentes: la lista principal usa data/ y fuentes.txt;
+  // una lista aparte los indica en <body data-datos="…" data-fuentes="…">.
   var DATOS = document.body.getAttribute('data-datos') || 'data/';
+  var FUENTES = document.body.getAttribute('data-fuentes') || 'fuentes.txt';
+
+  var estadoPagina = { cambios: [], tiposPorNombre: {}, consulta: '', tipo: '', todos: false };
 
   function $(id) { return document.getElementById(id); }
 
@@ -33,7 +38,7 @@
 
   /* «6:12 a. m.» no se parte entre dos renglones. */
   function fecha(texto) {
-    return String(texto).replace(/(\d{1,2}:\d{2}) ([ap])\. m\./g, '$1 $2. m.');
+    return String(texto).replace(/(\d{1,2}:\d{2}) ([ap])\. m\./g, '$1 $2. m.');
   }
 
   function plural(n, uno, varios) { return n + ' ' + (n === 1 ? uno : varios); }
@@ -42,11 +47,20 @@
 
   function listo(nodo) { nodo.setAttribute('aria-busy', 'false'); }
 
-  function pedir(ruta) {
+  function pedir(ruta, comoTexto) {
     return fetch(ruta, { cache: 'no-store' }).then(function (r) {
       if (!r.ok) throw new Error(ruta + ': ' + r.status);
-      return r.json();
+      return comoTexto ? r.text() : r.json();
     });
+  }
+
+  /* Texto con lo buscado resaltado (en color, sin cursiva). */
+  function conResaltado(etiqueta, clase, texto, consulta) {
+    var nodo = el(etiqueta, clase);
+    F.tramos(texto, consulta).forEach(function (t) {
+      nodo.appendChild(t.marca ? el('mark', null, t.texto) : document.createTextNode(t.texto));
+    });
+    return nodo;
   }
 
   /* ---------- Las páginas que vigilamos ---------- */
@@ -73,6 +87,8 @@
     else if (f.vigilada_desde_texto) cambio = 'Sin cambios desde ' + fecha(f.vigilada_desde_texto);
     else cambio = 'Sin cambios registrados';
     datos.appendChild(el('p', 'fuente__dato', cambio));
+    var tipos = F.tiposDe(f, estadoPagina.tiposPorNombre);
+    if (tipos.length) datos.appendChild(el('p', 'fuente__dato fuente__tipo', tipos.join(' · ')));
     li.appendChild(datos);
 
     var info = ESTADOS[f.estado] || ESTADOS.ok;
@@ -107,46 +123,59 @@
     $('punto-general').className = 'punto ' + (conError ? 'punto--error' : 'punto--ok');
   }
 
+  /* RSS por tipo: solo los que la revisión ya escribió (vienen en estado.json). */
+  function pintarRssPorTipo(estado) {
+    var caja = $('rss-tipos');
+    if (!caja || !estado || !Array.isArray(estado.tipos) || !estado.tipos.length) return;
+    var ul = el('ul', 'rss-tipos__lista');
+    var raiz = DATOS.replace(/data\/(.*)$/, '');
+    estado.tipos.forEach(function (t) {
+      if (!t || typeof t.feed !== 'string' || !/^data\/[a-z0-9\/-]+\.xml$/.test(t.feed)) return;
+      var li = el('li');
+      var a = el('a', null, t.nombre);
+      a.href = raiz + t.feed;
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+    if (!ul.firstChild) return;
+    caja.appendChild(ul);
+    caja.hidden = false;
+  }
+
   /* ---------- Lo que cambió ---------- */
 
-  function tarjetaCambio(c) {
-    var art = el('li', 'cambio');
+  function tarjetaCambio(c, consulta) {
+    var li = el('li', 'cambio');
     var nombre = c.nombre || 'Página sin nombre';
+    var nAgregadas = typeof c.agregadas_n === 'number' ? c.agregadas_n : (c.agregadas || []).length;
 
-    var cab = el('div', 'cambio__cab');
-    cab.appendChild(el('p', 'cambio__fecha', fecha(c.fecha_texto || '')));
-    cab.appendChild(el('h3', 'cambio__nombre', nombre));
+    var lineas = F.lineasOrdenadas(c, consulta);
+    var ul = el('ul', 'lineas');
+    lineas.slice(0, MAX_LINEAS).forEach(function (linea) {
+      ul.appendChild(conResaltado('li', null, linea, consulta));
+    });
+    li.appendChild(ul);
+    var resto = nAgregadas - Math.min(lineas.length, MAX_LINEAS);
+    if (resto > 0) li.appendChild(el('p', 'lineas__mas', resto === 1 ? 'Y 1 línea más en la página oficial' : 'Y ' + resto + ' líneas más en la página oficial'));
 
-    var agregadas = Array.isArray(c.agregadas) ? c.agregadas : [];
-    var nAgregadas = typeof c.agregadas_n === 'number' ? c.agregadas_n : agregadas.length;
-    var nQuitadas = typeof c.quitadas_n === 'number' ? c.quitadas_n : 0;
-    var partes = [];
-    if (nAgregadas) partes.push(plural(nAgregadas, 'línea nueva', 'líneas nuevas'));
-    if (nQuitadas) partes.push(nQuitadas === 1 ? '1 ya no está' : nQuitadas + ' ya no están');
-    if (partes.length) cab.appendChild(el('p', 'cambio__cuenta', partes.join(' · ')));
+    var pie = el('div', 'cambio__pie');
+    var quien = el('div', 'cambio__quien');
+    quien.appendChild(conResaltado('h3', 'cambio__nombre', nombre, consulta));
+    var datos = [fecha(c.fecha_texto || '')];
+    var tipos = F.tiposDe(c, estadoPagina.tiposPorNombre);
+    if (tipos.length) datos.push(tipos.join(' · '));
+    datos.push(plural(nAgregadas, 'línea nueva', 'líneas nuevas'));
+    quien.appendChild(el('p', 'cambio__fecha', datos.join(' · ')));
+    pie.appendChild(quien);
 
     var acciones = el('p', 'cambio__acciones');
     var oficial = enlace(c.url, 'Abrir la página oficial', 'boton boton--chico', 'de ' + nombre);
     if (oficial) acciones.appendChild(oficial);
     var aviso = enlace(c.aviso, 'Ver el aviso en GitHub', 'cambio__aviso', 'de ' + nombre);
     if (aviso) acciones.appendChild(aviso);
-    if (acciones.firstChild) cab.appendChild(acciones);
-    art.appendChild(cab);
-
-    var cuerpo = el('div', 'cambio__cuerpo');
-    if (agregadas.length) {
-      var ul = el('ul', 'lineas');
-      agregadas.slice(0, MAX_LINEAS).forEach(function (linea) {
-        ul.appendChild(el('li', null, linea));
-      });
-      cuerpo.appendChild(ul);
-      var resto = nAgregadas - Math.min(agregadas.length, MAX_LINEAS);
-      if (resto > 0) cuerpo.appendChild(el('p', 'lineas__mas', '+' + resto + ' más'));
-    } else {
-      cuerpo.appendChild(el('p', 'lineas__solo', 'Desaparecieron líneas de la página; no apareció texto nuevo.'));
-    }
-    art.appendChild(cuerpo);
-    return art;
+    if (acciones.firstChild) pie.appendChild(acciones);
+    li.appendChild(pie);
+    return li;
   }
 
   function desdeCuando(estado) {
@@ -159,45 +188,162 @@
     return primera ? primera.vigilada_desde_texto : null;
   }
 
-  function pintarCambios(datos, estado) {
-    var caja = $('lista-cambios');
-    var cambios = (datos && Array.isArray(datos.cambios)) ? datos.cambios : [];
+  /* Filtros por tipo: un botón por tipo, más «Todo». Solo si hay al menos dos tipos. */
+  function pintarFiltros() {
+    var caja = $('filtro-tipos');
+    var tipos = F.tiposEnOrden(estadoPagina.tiposPorNombre);
     vaciar(caja);
-    $('n-cambios').textContent = String(cambios.length);
-
-    if (!cambios.length) {
-      var vacio = el('div', 'vacio');
-      var desde = desdeCuando(estado);
-      vacio.appendChild(el('p', 'vacio__titulo',
-        desde ? 'Todavía no hay cambios: la vigilancia empezó el ' + fecha(desde).replace(/\.$/, '') + '.'
-              : 'Todavía no hay cambios.'));
-      vacio.appendChild(el('p', 'vacio__texto',
-        'Cuando una de las páginas cambie, aquí verás cuál fue y qué líneas nuevas aparecieron.'));
-      caja.appendChild(vacio);
-      listo(caja);
-      return;
-    }
-
-    var ol = el('ol', 'cambios');
-    cambios.forEach(function (c, i) {
-      var item = tarjetaCambio(c);
-      if (i >= MAX_CAMBIOS) item.hidden = true;
-      ol.appendChild(item);
-    });
-    caja.appendChild(ol);
-
-    if (cambios.length > MAX_CAMBIOS) {
-      var boton = el('button', 'boton boton--linea ver-mas',
-        'Ver los ' + (cambios.length - MAX_CAMBIOS) + ' anteriores');
-      boton.type = 'button';
-      boton.addEventListener('click', function () {
-        var ocultos = ol.querySelectorAll('li.cambio[hidden]');
-        Array.prototype.forEach.call(ocultos, function (li) { li.hidden = false; });
-        boton.remove();
+    if (tipos.length < 2) { caja.hidden = true; return; }
+    if (tipos.indexOf(estadoPagina.tipo) === -1) estadoPagina.tipo = '';
+    [''].concat(tipos).forEach(function (t) {
+      var b = el('button', 'chip', t || 'Todo');
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(estadoPagina.tipo === t));
+      b.addEventListener('click', function () {
+        estadoPagina.tipo = t;
+        Array.prototype.forEach.call(caja.querySelectorAll('.chip'), function (otro) {
+          otro.setAttribute('aria-pressed', String(otro === b));
+        });
+        recordarEnDireccion();
+        pintarLista();
       });
-      caja.appendChild(boton);
+      caja.appendChild(b);
+    });
+    caja.hidden = false;
+  }
+
+  function pintarLista() {
+    var caja = $('lista-cambios');
+    var cambios = estadoPagina.cambios;
+    var consulta = estadoPagina.consulta;
+    var tipo = estadoPagina.tipo;
+    var filtrando = !!(F.terminos(consulta).length || tipo);
+    var conNovedades = cambios.filter(function (c) { return !F.sinNovedades(c); });
+    var vistos = conNovedades.filter(function (c) {
+      return F.coincide(c, consulta, tipo, estadoPagina.tiposPorNombre);
+    });
+    vaciar(caja);
+
+    var cuenta = $('cuenta-filtro');
+    if (filtrando) {
+      cuenta.textContent = vistos.length
+        ? 'Mostrando ' + plural(vistos.length, 'cambio', 'cambios') + ' de ' + conNovedades.length + '.'
+        : '';
+    } else {
+      cuenta.textContent = '';
     }
+
+    if (!vistos.length) {
+      var vacio = el('div', 'vacio');
+      if (filtrando) {
+        vacio.appendChild(el('p', 'vacio__titulo', 'Nada con esa búsqueda.'));
+        vacio.appendChild(el('p', 'vacio__texto',
+          'Prueba con otra palabra o quita el filtro. Solo buscamos en las líneas nuevas de cada cambio, no en toda la página oficial.'));
+        var limpiar = el('button', 'boton boton--linea', 'Ver todo');
+        limpiar.type = 'button';
+        limpiar.addEventListener('click', function () { limpiarFiltros(); });
+        vacio.appendChild(limpiar);
+      } else {
+        var desde = desdeCuando(estadoPagina.estado);
+        vacio.appendChild(el('p', 'vacio__titulo',
+          desde ? 'Todavía no hay novedades: la vigilancia empezó el ' + fecha(desde).replace(/\.$/, '') + '.'
+                : 'Todavía no hay novedades.'));
+        vacio.appendChild(el('p', 'vacio__texto',
+          'Cuando aparezca algo nuevo en una de las páginas, aquí verás cuál fue y qué líneas aparecieron.'));
+      }
+      caja.appendChild(vacio);
+    } else {
+      var ol = el('ol', 'cambios');
+      vistos.forEach(function (c, i) {
+        var item = tarjetaCambio(c, consulta);
+        if (!filtrando && !estadoPagina.todos && i >= MAX_CAMBIOS) item.hidden = true;
+        ol.appendChild(item);
+      });
+      caja.appendChild(ol);
+
+      if (!filtrando && !estadoPagina.todos && vistos.length > MAX_CAMBIOS) {
+        var boton = el('button', 'boton boton--linea ver-mas',
+          'Ver los ' + (vistos.length - MAX_CAMBIOS) + ' anteriores');
+        boton.type = 'button';
+        boton.addEventListener('click', function () {
+          estadoPagina.todos = true;
+          Array.prototype.forEach.call(ol.querySelectorAll('li.cambio[hidden]'), function (li) { li.hidden = false; });
+          boton.remove();
+        });
+        caja.appendChild(boton);
+      }
+    }
+    pintarSinNovedades(cambios);
     listo(caja);
+  }
+
+  /* Las revisiones en que solo desaparecieron líneas: abajo, plegadas, sin aviso. */
+  function pintarSinNovedades(cambios) {
+    var caja = $('sin-novedades');
+    if (!caja) return;
+    var lista = cambios.filter(F.sinNovedades);
+    vaciar(caja);
+    if (!lista.length) { caja.hidden = true; return; }
+    var det = el('details', 'sin-novedades');
+    det.appendChild(el('summary', null, plural(lista.length, 'revisión', 'revisiones') + ' sin novedades'));
+    det.appendChild(el('p', 'nota', 'En estas solo desaparecieron líneas de la página: no apareció nada nuevo, así que no hubo aviso.'));
+    var ul = el('ul', 'sin-novedades__lista');
+    lista.forEach(function (c) {
+      ul.appendChild(el('li', null, (c.nombre || 'Página sin nombre') + ' · ' + fecha(c.fecha_texto || '')));
+    });
+    det.appendChild(ul);
+    caja.appendChild(det);
+    caja.hidden = false;
+  }
+
+  function pintarResumen() {
+    var n = F.resumenSemana(estadoPagina.cambios, new Date());
+    $('resumen-semana').textContent = n
+      ? 'Esta semana: ' + plural(n, 'página con algo nuevo', 'páginas con algo nuevo') + '.'
+      : 'Esta semana todavía no aparece nada nuevo.';
+  }
+
+  function limpiarFiltros() {
+    estadoPagina.consulta = '';
+    estadoPagina.tipo = '';
+    $('buscar').value = '';
+    pintarFiltros();
+    recordarEnDireccion();
+    pintarLista();
+  }
+
+  /* La búsqueda y el filtro quedan en la dirección (?buscar=beca&tipo=Becas) para compartirlos. */
+  function recordarEnDireccion() {
+    if (!window.history || !window.URLSearchParams) return;
+    var p = new URLSearchParams(window.location.search);
+    if (estadoPagina.consulta.trim()) p.set('buscar', estadoPagina.consulta.trim()); else p.delete('buscar');
+    if (estadoPagina.tipo) p.set('tipo', estadoPagina.tipo); else p.delete('tipo');
+    var q = p.toString();
+    try {
+      window.history.replaceState(null, '', window.location.pathname + (q ? '?' + q : '') + window.location.hash);
+    } catch (e) { /* sin historial (archivo local): no pasa nada */ }
+  }
+
+  function leerDireccion() {
+    if (!window.URLSearchParams) return;
+    var p = new URLSearchParams(window.location.search);
+    estadoPagina.consulta = (p.get('buscar') || '').slice(0, 80);
+    estadoPagina.tipo = (p.get('tipo') || '').slice(0, 40);
+    $('buscar').value = estadoPagina.consulta;
+  }
+
+  function prepararBuscador() {
+    var campo = $('buscar');
+    var espera;
+    campo.addEventListener('input', function () {
+      clearTimeout(espera);
+      espera = setTimeout(function () {
+        estadoPagina.consulta = campo.value.slice(0, 80);
+        recordarEnDireccion();
+        pintarLista();
+      }, 120);
+    });
+    $('form-buscar').addEventListener('submit', function (e) { e.preventDefault(); });
   }
 
   function fallo(idCaja, texto) {
@@ -209,19 +355,44 @@
 
   /* ---------- Arranque ---------- */
 
+  leerDireccion();
+  prepararBuscador();
+
   var estadoListo = pedir(DATOS + 'estado.json').then(function (estado) {
-    pintarFuentes(estado);
+    estadoPagina.estado = estado;
+    (Array.isArray(estado.fuentes) ? estado.fuentes : []).forEach(function (f) {
+      if (Array.isArray(f.tipos) && f.tipos.length) estadoPagina.tiposPorNombre[f.nombre] = f.tipos;
+    });
+    pintarRssPorTipo(estado);
     return estado;
   }).catch(function () {
-    fallo('lista-fuentes', 'No pudimos cargar el estado de las páginas. Recarga en un momento; si sigue igual, los avisos siguen llegando por el RSS y por GitHub.');
-    $('ultima-revision').textContent = 'no disponible';
-    $('n-fuentes').textContent = '–';
     return null;
   });
 
-  estadoListo.then(function (estado) {
+  // Si estado.json todavía no trae los tipos (antes de la primera revisión con tipos),
+  // se leen de la lista de fuentes.
+  var tiposListos = estadoListo.then(function (estado) {
+    if (Object.keys(estadoPagina.tiposPorNombre).length) return estado;
+    return pedir(FUENTES, true).then(function (texto) {
+      estadoPagina.tiposPorNombre = F.tiposDesdeFuentes(texto);
+      return estado;
+    }).catch(function () { return estado; });
+  });
+
+  tiposListos.then(function (estado) {
+    if (estado) {
+      pintarFuentes(estado);
+    } else {
+      fallo('lista-fuentes', 'No pudimos cargar el estado de las páginas. Recarga en un momento; si sigue igual, los avisos siguen llegando por el RSS y por GitHub.');
+      $('ultima-revision').textContent = 'no disponible';
+      $('n-fuentes').textContent = '–';
+    }
+    pintarFiltros();
     return pedir(DATOS + 'cambios.json').then(function (datos) {
-      pintarCambios(datos, estado);
+      estadoPagina.cambios = (datos && Array.isArray(datos.cambios)) ? datos.cambios : [];
+      $('n-cambios').textContent = String(estadoPagina.cambios.filter(function (c) { return !F.sinNovedades(c); }).length);
+      pintarResumen();
+      pintarLista();
     }).catch(function () {
       fallo('lista-cambios', 'No pudimos cargar la lista de cambios. Recarga en un momento; si sigue igual, los avisos siguen llegando por el RSS y por GitHub.');
       $('n-cambios').textContent = '–';
