@@ -324,5 +324,120 @@ class CorridaCompleta(unittest.TestCase):
         self.assertEqual(principal.count("<entry>"), sum(1 for c in cambios[:50] if c.get("agregadas_n")))
 
 
+class TiposSinRepetir(unittest.TestCase):
+    def test_mismo_tipo_escrito_distinto(self):
+        self.assertEqual(R.partes_opcionales(["tipo: Becas, becas, BÉCAS"]), ([], ["Becas"]))
+        fuentes = [{"tipos": ["Becas"]}, {"tipos": ["becas", "Paz"]}, {"tipos": ["PAZ"]}]
+        self.assertEqual(R.tipos_en_orden(fuentes), ["Becas", "Paz"])
+
+    def test_rss_por_tipo_compara_sin_mayusculas(self):
+        self.assertTrue(R.es_del_tipo(cambio(tipos=["becas"]), "Becas", {}))
+        self.assertFalse(R.es_del_tipo(cambio(tipos=["Paz"]), "Becas", {}))
+
+
+class CierreConTope(unittest.TestCase):
+    def test_los_mas_viejos_primero_y_maximo_diez(self):
+        issues = [issue(n, f"Cambió: X · {n}", 31 + (n % 7)) for n in range(1, 16)]
+        cerrar = R.avisos_por_cerrar(issues, AHORA)
+        fechas = [i["created_at"] for i in cerrar]
+        self.assertEqual(fechas, sorted(fechas))
+        llamadas = []
+
+        def responder(pedido, timeout=None):
+            llamadas.append((pedido.get_method(), pedido.full_url))
+            if pedido.get_method() == "GET":
+                return Respuesta(json.dumps(issues).encode())
+            return Respuesta(b"{}")
+
+        with mock.patch.dict(os.environ, ENTORNO), mock.patch("urllib.request.urlopen", responder):
+            self.assertEqual(R.cerrar_avisos_viejos(AHORA), R.CIERRES_POR_CORRIDA)
+        self.assertIn("sort=created&direction=asc", llamadas[0][1])
+        cerrados = [u for m, u in llamadas if m == "PATCH"]
+        self.assertEqual(len(cerrados), 10)
+        primero = cerrar[0]["number"]
+        self.assertTrue(cerrados[0].endswith(f"/issues/{primero}"))
+
+
+class Caidas(unittest.TestCase):
+    def test_parece_caida(self):
+        base = [f"línea {i}" for i in range(20)]
+        self.assertTrue(R.parece_caida(base, base[:7]))       # bajó 65 %
+        self.assertFalse(R.parece_caida(base, base[:9]))      # bajó 55 %
+        self.assertFalse(R.parece_caida(base[:9], []))        # base chica: no aplica
+
+
+class CorridaConCaidasYVistas(CorridaCompleta):
+    # Usa la copia del repo de CorridaCompleta, sin repetir sus pruebas.
+    test_dos_corridas_sin_cambios_falsos = None
+    test_escribe_tipos_y_rss_por_tipo = None
+    test_cambio_real_y_solo_quitadas = None
+
+    def leer(self, *ruta):
+        return json.loads((self.dir.joinpath("data", *ruta)).read_text(encoding="utf-8"))
+
+    def test_pagina_de_error_con_200_no_pisa_la_base(self):
+        modulo = cargar(None, self.dir)
+        fondo = next(f for f in modulo.leer_fuentes() if f["slug"] == "fondo-emprender-sena")
+        base = (modulo.TEXTOS / "fondo-emprender-sena.txt").read_text(encoding="utf-8")
+        error = {fondo["url"]: "<p>Sitio en mantenimiento</p><p>Vuelva más tarde, por favor</p>"}
+        antes = len(self.leer("cambios.json")["cambios"])
+
+        for vez in (1, 2):
+            self.correr(paginas=error)
+            self.assertEqual((modulo.TEXTOS / "fondo-emprender-sena.txt").read_text(encoding="utf-8"), base)
+            ficha = next(f for f in self.leer("estado.json")["fuentes"] if f["slug"] == "fondo-emprender-sena")
+            self.assertEqual(ficha["estado"], "error")
+            self.assertEqual(ficha["caidas_seguidas"], vez)
+            self.assertIn("mantenimiento", ficha["error"])
+            nuevos = self.leer("cambios.json")["cambios"][: len(self.leer("cambios.json")["cambios"]) - antes]
+            self.assertFalse([c for c in nuevos if c["slug"] == "fondo-emprender-sena"])
+
+        # Si vuelve la página de siempre, no hay aviso falso y el contador vuelve a cero.
+        self.correr()
+        ficha = next(f for f in self.leer("estado.json")["fuentes"] if f["slug"] == "fondo-emprender-sena")
+        self.assertEqual(ficha["estado"], "ok")
+        self.assertEqual(ficha["caidas_seguidas"], 0)
+        nuevos = self.leer("cambios.json")["cambios"][: len(self.leer("cambios.json")["cambios"]) - antes]
+        self.assertFalse([c for c in nuevos if c["slug"] == "fondo-emprender-sena"])
+
+    def test_tres_caidas_seguidas_se_aceptan(self):
+        modulo = cargar(None, self.dir)
+        fondo = next(f for f in modulo.leer_fuentes() if f["slug"] == "fondo-emprender-sena")
+        corta = {fondo["url"]: "<p>Sitio en mantenimiento</p><p>Vuelva más tarde, por favor</p>"}
+        for _ in range(3):
+            self.correr(paginas=corta)
+        self.assertEqual((modulo.TEXTOS / "fondo-emprender-sena.txt").read_text(encoding="utf-8").splitlines(),
+                         ["Sitio en mantenimiento", "Vuelva más tarde, por favor"])
+        ultimo = next(c for c in self.leer("cambios.json")["cambios"] if c["slug"] == "fondo-emprender-sena")
+        self.assertEqual(ultimo["agregadas_n"], 2)
+
+    def test_linea_que_vuelve_antes_de_30_dias_no_es_nueva(self):
+        modulo = cargar(None, self.dir)
+        fondo = next(f for f in modulo.leer_fuentes() if f["slug"] == "fondo-emprender-sena")
+        lineas = (modulo.TEXTOS / "fondo-emprender-sena.txt").read_text(encoding="utf-8").splitlines()
+        sin_ultima = {fondo["url"]: "".join(f"<p>{l}</p>" for l in lineas[:-1])}
+        self.correr()                      # guarda las líneas vistas
+        previos = len([c for c in self.leer("cambios.json")["cambios"] if c["slug"] == "fondo-emprender-sena"])
+        self.correr(paginas=sin_ultima)    # desaparece una línea: «sin novedades»
+        self.correr()                      # vuelve: no es nueva
+        cambios = [c for c in self.leer("cambios.json")["cambios"] if c["slug"] == "fondo-emprender-sena"]
+        # Solo queda la revisión en que desapareció; cuando volvió no se anotó nada ni hubo aviso.
+        self.assertEqual(len(cambios) - previos, 1)
+        self.assertTrue(cambios[0]["sin_novedades"])
+
+    def test_linea_vista_hace_mas_de_30_dias_si_es_nueva(self):
+        modulo = cargar(None, self.dir)
+        fondo = next(f for f in modulo.leer_fuentes() if f["slug"] == "fondo-emprender-sena")
+        lineas = (modulo.TEXTOS / "fondo-emprender-sena.txt").read_text(encoding="utf-8").splitlines()
+        vieja = "Convocatoria nacional 2027 para el Cauca"
+        (modulo.TEXTOS / "fondo-emprender-sena.vistas.json").write_text(
+            json.dumps({modulo.clave_linea(vieja): "2000-01-01"}), encoding="utf-8")
+        self.correr(paginas={fondo["url"]: "".join(f"<p>{l}</p>" for l in lineas + [vieja])})
+        ultimo = next(c for c in self.leer("cambios.json")["cambios"] if c["slug"] == "fondo-emprender-sena")
+        self.assertEqual(ultimo["agregadas"], [vieja])
+        vistas = json.loads((modulo.TEXTOS / "fondo-emprender-sena.vistas.json").read_text(encoding="utf-8"))
+        self.assertNotIn("2000-01-01", vistas.values())  # las viejas se limpian
+
+
 if __name__ == "__main__":
     unittest.main()

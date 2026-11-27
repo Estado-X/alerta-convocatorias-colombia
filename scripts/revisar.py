@@ -66,6 +66,11 @@ TAMANO_MAXIMO = 8_000_000
 MAX_CAMBIOS = 300
 MAX_LINEAS_AVISO = 20
 DIAS_AVISO_ABIERTO = 30  # los avisos del robot se cierran solos después de estos días
+CIERRES_POR_CORRIDA = 10  # como mucho, para no mandar una ráfaga de correos el mismo día
+CAIDA_MAXIMA = 0.6        # si una página trae más de 60 % menos líneas que la base, no la pisa
+LINEAS_MINIMAS_CAIDA = 10  # con bases más chicas no se aplica (una lista filtrada cambia mucho)
+CAIDAS_PARA_ACEPTAR = 3   # a la tercera revisión seguida con la caída, se acepta como base nueva
+DIAS_VISTAS = 30          # una línea que vuelve antes de estos días no cuenta como nueva
 ROBOT = "github-actions[bot]"
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
@@ -246,7 +251,7 @@ def partes_opcionales(partes: list[str]) -> tuple[list[str], list[str]]:
         if encontrado:
             for tipo in encontrado.group(1).split(","):
                 tipo = re.sub(r"\s+", " ", tipo).strip()[:40]
-                if tipo and tipo not in tipos:
+                if tipo and slug(tipo) not in {slug(t) for t in tipos}:
                     tipos.append(tipo)
         else:
             palabras.extend(sin_tildes(p.strip()) for p in parte.split(",") if p.strip())
@@ -282,6 +287,33 @@ def comparar(anteriores: list[str], lineas: list[str]) -> tuple[list[str], list[
     """Líneas que aparecieron y líneas que ya no están, en el orden de cada página."""
     viejas, nuevas = set(anteriores), set(lineas)
     return [l for l in lineas if l not in viejas], [l for l in anteriores if l not in nuevas]
+
+
+def parece_caida(anteriores: list[str], lineas: list[str]) -> bool:
+    """¿La página trajo muchas menos líneas que la base? Suele ser una página de error o de
+    mantenimiento que responde con código 200; pisar la base daría un aviso falso al día siguiente."""
+    return len(anteriores) >= LINEAS_MINIMAS_CAIDA and len(lineas) < len(anteriores) * (1 - CAIDA_MAXIMA)
+
+
+def clave_linea(linea: str) -> str:
+    return hashlib.sha1(linea.encode("utf-8")).hexdigest()[:16]
+
+
+def leer_vistas(ruta: Path, ahora: datetime) -> dict[str, str]:
+    """Líneas vistas en los últimos DIAS_VISTAS días: {clave: fecha en que se vio por última vez}."""
+    limite = (ahora - timedelta(days=DIAS_VISTAS)).date().isoformat()
+    datos = leer_json(ruta, {})
+    if not isinstance(datos, dict):
+        return {}
+    return {k: v for k, v in datos.items() if isinstance(v, str) and v >= limite}
+
+
+def actualizar_vistas(vistas: dict[str, str], lineas: list[str], ahora: datetime) -> dict[str, str]:
+    hoy = ahora.date().isoformat()
+    salida = dict(vistas)
+    for linea in lineas:
+        salida[clave_linea(linea)] = hoy
+    return dict(sorted(salida.items()))
 
 
 def sin_novedades(cambio: dict) -> bool:
@@ -392,8 +424,8 @@ def avisos_por_cerrar(issues: list[dict], ahora: datetime, dias: int = DIAS_AVIS
         except (KeyError, ValueError):
             continue
         if creado <= limite:
-            salida.append(issue)
-    return salida
+            salida.append((creado, issue))
+    return [issue for _, issue in sorted(salida, key=lambda par: par[0])]  # los más viejos primero
 
 
 def dias_aviso_abierto() -> int:
@@ -413,7 +445,8 @@ def cerrar_avisos_viejos(ahora: datetime) -> int:
     abiertos: list[dict] = []
     try:
         for pagina in range(1, 11):  # hasta 1.000 issues abiertos
-            lote = _api(token, f"https://api.github.com/repos/{repo}/issues?state=open&per_page=100&page={pagina}")
+            lote = _api(token, f"https://api.github.com/repos/{repo}/issues?state=open&sort=created"
+                               f"&direction=asc&per_page=100&page={pagina}")
             if not lote:
                 break
             abiertos.extend(lote)
@@ -423,7 +456,7 @@ def cerrar_avisos_viejos(ahora: datetime) -> int:
         print(f"No pude leer los avisos abiertos: {type(error).__name__}: {error}", file=sys.stderr)
         return 0
     cerrados = 0
-    for issue in avisos_por_cerrar(abiertos, ahora, dias):
+    for issue in avisos_por_cerrar(abiertos, ahora, dias)[:CIERRES_POR_CORRIDA]:
         numero = issue.get("number")
         try:
             _api(token, f"https://api.github.com/repos/{repo}/issues/{numero}/comments", "POST", {
@@ -452,12 +485,19 @@ def tipos_de(cambio: dict, tipos_por_slug: dict[str, list[str]]) -> list[str]:
 
 
 def tipos_en_orden(fuentes: list[dict]) -> list[str]:
+    """Tipos en el orden de las páginas, sin repetir («Becas» y «becas» son el mismo)."""
     vistos: list[str] = []
+    claves: set[str] = set()
     for f in fuentes:
         for t in f.get("tipos", []):
-            if t not in vistos:
+            if slug(t) not in claves:
+                claves.add(slug(t))
                 vistos.append(t)
     return vistos
+
+
+def es_del_tipo(cambio: dict, tipo: str, tipos_por_slug: dict[str, list[str]]) -> bool:
+    return slug(tipo) in {slug(t) for t in tipos_de(cambio, tipos_por_slug)}
 
 
 def feed(cambios: list[dict], ahora: datetime, tipo: str | None = None) -> str:
@@ -524,8 +564,10 @@ def main() -> int:
             "estado": "ok",
             "error": None,
             "ultimas_agregadas": previo.get("ultimas_agregadas", []),
+            "caidas_seguidas": 0,
         }
         archivo = TEXTOS / f"{fuente['slug']}.txt"
+        archivo_vistas = TEXTOS / f"{fuente['slug']}.vistas.json"
         try:
             lineas = lineas_visibles(descargar(fuente["url"]), fuente["palabras"])
             # Con «palabras», que hoy no haya líneas que coincidan es normal: se guarda vacío
@@ -544,11 +586,29 @@ def main() -> int:
             continue
 
         anteriores = [l for l in archivo.read_text(encoding="utf-8").splitlines() if l] if archivo.exists() else None
+        if anteriores is not None and parece_caida(anteriores, lineas):
+            seguidas = int(previo.get("caidas_seguidas") or 0) + 1
+            if seguidas < CAIDAS_PARA_ACEPTAR:
+                # Se conserva la base y la página queda «con error» hasta que vuelva a ser la de antes.
+                mensaje = (f"la página trajo {len(lineas)} líneas de {len(anteriores)}: parece una página "
+                           f"de error o de mantenimiento; se conserva la revisión anterior")
+                print(f"{fuente['nombre']}: {mensaje}", file=sys.stderr)
+                ficha.update(estado="error", error=mensaje, caidas_seguidas=seguidas,
+                             ultima_revision=previo.get("ultima_revision"),
+                             ultima_revision_texto=previo.get("ultima_revision_texto"),
+                             intento_fallido=ahora.isoformat(), intento_fallido_texto=fecha_texto(ahora))
+                errores.append({"slug": fuente["slug"], "nombre": fuente["nombre"], "error": mensaje})
+                estado.append(ficha)
+                continue
+            # Tercera revisión seguida igual: la página de verdad cambió así. Se acepta como base nueva.
+        vistas = leer_vistas(archivo_vistas, ahora)
         ficha["lineas"] = len(lineas)
         if anteriores is None:
             ficha["estado"] = "nueva"  # primera revisión: queda como base, sin aviso
         else:
             agregadas, quitadas = comparar(anteriores, lineas)
+            # Una línea que ya se vio en los últimos 30 días y vuelve no es nueva.
+            agregadas = [l for l in agregadas if clave_linea(l) not in vistas]
             if agregadas or quitadas:
                 cambio = {
                     "slug": fuente["slug"],
@@ -570,6 +630,7 @@ def main() -> int:
                     ficha.update(ultimo_cambio=ahora.isoformat(), ultimo_cambio_texto=fecha_texto(ahora),
                                  ultimas_agregadas=agregadas[:8])
         escribir(archivo, "\n".join(lineas) + ("\n" if lineas else ""))
+        escribir(archivo_vistas, json.dumps(actualizar_vistas(vistas, lineas, ahora), indent=0) + "\n")
         estado.append(ficha)
 
     cambios = (nuevos + cambios)[:MAX_CAMBIOS]
@@ -593,7 +654,7 @@ def main() -> int:
     }, ensure_ascii=False, indent=2) + "\n")
     escribir(DATOS / "feed.xml", feed(cambios, ahora))
     for tipo in tipos:
-        del_tipo = [c for c in cambios if tipo in tipos_de(c, tipos_por_slug)]
+        del_tipo = [c for c in cambios if es_del_tipo(c, tipo, tipos_por_slug)]
         escribir(RAIZ / ruta_feed_tipo(tipo), feed(del_tipo, ahora, tipo))
     cerrados = cerrar_avisos_viejos(ahora)
     print(f"Revisadas {len(fuentes)} páginas · {con_novedades} con algo nuevo · "
