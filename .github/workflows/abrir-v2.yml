@@ -1,0 +1,149 @@
+# Abre la versión 2: une la rama v2 a main el viernes 22 de enero de 2027, sin depender de ningún computador.
+#
+# Tres intentos, hora de Bogotá (UTC−5): jueves 21 ene a las 11:17 p. m., y viernes 22 ene a las 2:17 a. m.
+# y a las 5:17 a. m. GitHub suele correr las tareas programadas varias horas tarde (en este repo, entre 6 y
+# 11 h), así que el seguro de fecha acepta que un intento arranque tarde, hasta la hora del post (3:00 p. m.
+# del viernes). Fuera de esa ventana no hace nada. Para que sea estricto, cambia VENTANA_FIN por
+# 2027-01-22T05:17:00-05:00.
+#
+# Cada intento: revisa la fecha; si la V2 ya está en main, solo comprueba la página; si no, une con
+# «git merge --no-ff origin/v2» (sin forzar nada), sube, pide una revisión de datos con los tipos nuevos,
+# espera a que la página en vivo muestre <meta name="version" content="2"> y se apaga solo.
+# Si algo choca, falla en rojo y no fuerza nada. La rama v2 no se borra.
+#
+# Respaldo manual: pestaña Actions → «Abrir la versión 2» → Run workflow (también desde el celular).
+# Solo usa acciones de GitHub y comandos de git y gh. En las copias hechas con la plantilla no corre.
+name: Abrir la versión 2
+
+on:
+  schedule:
+    - cron: "17 4 22 1 *"   # 11:17 p. m. del jueves 21 ene (Bogotá)
+    - cron: "17 7 22 1 *"   # 2:17 a. m. del viernes 22 ene (Bogotá)
+    - cron: "17 10 22 1 *"  # 5:17 a. m. del viernes 22 ene (Bogotá)
+  workflow_dispatch:
+    inputs:
+      fuera_de_ventana:
+        description: "Unir aunque sea fuera de la ventana de fecha (solo si Juan lo decidió)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # unir y subir a main
+  actions: write    # pedir la revisión de datos y apagarse al terminar
+
+# El mismo grupo que la revisión diaria (revisar.yml): nunca corren a la vez.
+concurrency:
+  group: revisar-convocatorias
+  cancel-in-progress: false
+
+env:
+  VENTANA_INICIO: "2027-01-21T23:17:00-05:00"
+  VENTANA_FIN: "2027-01-22T15:00:00-05:00"
+  PAGINA: "https://estado-x.github.io/alerta-convocatorias-colombia/"
+
+jobs:
+  abrir:
+    if: github.repository == 'Estado-X/alerta-convocatorias-colombia'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Seguro de fecha
+        id: fecha
+        env:
+          FUERA_DE_VENTANA: ${{ inputs.fuera_de_ventana || false }}
+        run: |
+          ahora=$(date -u +%s)
+          inicio=$(date -u -d "$VENTANA_INICIO" +%s)
+          fin=$(date -u -d "$VENTANA_FIN" +%s)
+          echo "Ahora en Bogotá: $(TZ=America/Bogota date '+%Y-%m-%d %H:%M')"
+          if [ "$ahora" -ge "$inicio" ] && [ "$ahora" -lt "$fin" ]; then
+            echo "Dentro de la ventana ($VENTANA_INICIO a $VENTANA_FIN)."
+            echo "seguir=si" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$FUERA_DE_VENTANA" = "true" ]; then
+            echo "::warning::Fuera de la ventana, pero se corrió a mano con «fuera_de_ventana»."
+            echo "seguir=si" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Fuera de la ventana ($VENTANA_INICIO a $VENTANA_FIN): no hago nada."
+            echo "seguir=no" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v6
+        if: steps.fecha.outputs.seguir == 'si'
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Unir v2 a main
+        id: unir
+        if: steps.fecha.outputs.seguir == 'si'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git fetch origin +refs/heads/main:refs/remotes/origin/main +refs/heads/v2:refs/remotes/origin/v2; then
+            echo "::error::No encontré la rama v2 en el repo. No hago nada."
+            exit 1
+          fi
+          if git merge-base --is-ancestor origin/v2 origin/main; then
+            echo "La V2 ya está en main: no hay nada que unir."
+            echo "unida=antes" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # La rama no puede tocar los datos del robot ni los flujos (el robot no puede cambiar flujos).
+          base=$(git merge-base origin/main origin/v2)
+          prohibidos=$(git diff --name-only "$base" origin/v2 -- data .github/workflows || true)
+          if [ -n "$prohibidos" ]; then
+            echo "::error::La rama v2 cambia archivos que no debe tocar:"
+            echo "$prohibidos"
+            exit 1
+          fi
+          for intento in 1 2 3; do
+            git checkout -q -B main origin/main
+            if ! git merge --no-ff origin/v2 -m "Versión 2: buscador, filtros por tipo, menos avisos falsos y cómo colaborar"; then
+              git merge --abort || true
+              echo "::error::La unión chocó. No forcé nada: hay que revisarla a mano."
+              exit 1
+            fi
+            if git push origin main; then
+              echo "unida=ahora" >> "$GITHUB_OUTPUT"
+              echo "V2 unida a main."
+              exit 0
+            fi
+            echo "La subida no entró (main cambió mientras tanto). Vuelvo a intentar ($intento de 3)."
+            sleep 20
+            git fetch origin +refs/heads/main:refs/remotes/origin/main
+          done
+          echo "::error::No pude subir la unión después de tres intentos. No forcé nada."
+          exit 1
+
+      - name: Pedir una revisión con los tipos nuevos
+        if: steps.unir.outputs.unida == 'ahora'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Queda en espera hasta que este flujo termine (mismo grupo) y escribe los RSS por tipo
+          # y cierra los avisos viejos. Si no se puede pedir, la revisión diaria lo hace igual.
+          gh workflow run revisar.yml --ref main || echo "::warning::No pude pedir la revisión; la diaria lo hará."
+
+      - name: Comprobar la página en vivo
+        if: steps.fecha.outputs.seguir == 'si'
+        run: |
+          for i in $(seq 1 20); do
+            principal=$(curl -fsSL -H "Cache-Control: no-cache" "${PAGINA}?v2=$(date +%s)" || true)
+            doctorado=$(curl -fsSL -H "Cache-Control: no-cache" "${PAGINA}doctorado/?v2=$(date +%s)" || true)
+            if printf '%s' "$principal" | grep -q '<meta name="version" content="2">' \
+               && printf '%s' "$doctorado" | grep -q '<meta name="version" content="2">'; then
+              echo "La página en vivo ya muestra la versión 2."
+              exit 0
+            fi
+            echo "Todavía no ($i de 20). Espero 30 s."
+            sleep 30
+          done
+          echo "::error::La página en vivo no muestra la versión 2 después de 10 minutos. Revisa Pages."
+          exit 1
+
+      - name: Apagarse
+        if: steps.fecha.outputs.seguir == 'si'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow disable abrir-v2.yml --repo "$GITHUB_REPOSITORY"
