@@ -3,8 +3,9 @@
 # Tres intentos, hora de Bogotá (UTC−5): jueves 21 ene a las 11:17 p. m., y viernes 22 ene a las 2:17 a. m.
 # y a las 5:17 a. m. GitHub suele correr las tareas programadas varias horas tarde (en este repo, entre 6 y
 # 11 h), así que el seguro de fecha acepta que un intento arranque tarde, hasta la hora del post (3:00 p. m.
-# del viernes). Fuera de esa ventana no hace nada. Para que sea estricto, cambia VENTANA_FIN por
-# 2027-01-22T05:17:00-05:00.
+# del viernes). Antes de la ventana no hace nada. Después, si la V2 no quedó en main, falla en rojo (para que
+# llegue el correo de fallo) sin unir. Una corrida manual fuera de la ventana también sale en rojo, salvo que
+# se marque «fuera_de_ventana». Para que sea estricto, cambia VENTANA_FIN por 2027-01-22T05:17:00-05:00.
 #
 # Cada intento: revisa la fecha; si la V2 ya está en main, solo comprueba la página; si no, une con
 # «git merge --no-ff origin/v2» (sin forzar nada), sube, pide una revisión de datos con los tipos nuevos,
@@ -51,6 +52,7 @@ jobs:
         id: fecha
         env:
           FUERA_DE_VENTANA: ${{ inputs.fuera_de_ventana || false }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           ahora=$(date -u +%s)
           inicio=$(date -u -d "$VENTANA_INICIO" +%s)
@@ -62,8 +64,25 @@ jobs:
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ "$FUERA_DE_VENTANA" = "true" ]; then
             echo "::warning::Fuera de la ventana, pero se corrió a mano con «fuera_de_ventana»."
             echo "seguir=si" >> "$GITHUB_OUTPUT"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "::error::Fuera de la ventana ($VENTANA_INICIO a $VENTANA_FIN). No uní nada. Para unir igual, vuelve a correrlo marcando «fuera_de_ventana»."
+            exit 1
+          elif [ "$ahora" -ge "$fin" ]; then
+            # Ya pasó la hora del post. Si la V2 no está en main, falla en rojo para que llegue el correo de fallo.
+            adelante=$(gh api "repos/$GITHUB_REPOSITORY/compare/main...v2" --jq .ahead_by 2>/dev/null || true)
+            case "$adelante" in ''|*[!0-9]*) adelante="?" ;; esac
+            if [ "$adelante" = "0" ]; then
+              echo "::notice::Ya pasó la ventana y la V2 está en main: no hago nada."
+              echo "seguir=no" >> "$GITHUB_OUTPUT"
+            elif [ "$adelante" = "?" ]; then
+              echo "::error::Ya pasó la ventana y no pude comprobar si la V2 está en main. Revísalo a mano."
+              exit 1
+            else
+              echo "::error::Ya pasó la ventana y la V2 no está en main ($adelante commits sin unir). No uní nada: hay que revisarla a mano."
+              exit 1
+            fi
           else
-            echo "::notice::Fuera de la ventana ($VENTANA_INICIO a $VENTANA_FIN): no hago nada."
+            echo "::notice::Todavía no empieza la ventana ($VENTANA_INICIO a $VENTANA_FIN): no hago nada."
             echo "seguir=no" >> "$GITHUB_OUTPUT"
           fi
 
