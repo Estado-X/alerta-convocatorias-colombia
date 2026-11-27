@@ -1,0 +1,76 @@
+name: Propón una página
+description: Una página oficial de convocatorias, fondos o becas que debería estar en la alerta.
+title: "Propón una página: "
+labels: ["propuesta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por proponer. Todo lo que escribas aquí es público: **no pongas correos, teléfonos ni datos personales**.
+        Antes de enviar, mira qué páginas sirven en [CONTRIBUTING.md](https://github.com/Estado-X/alerta-convocatorias-colombia/blob/main/CONTRIBUTING.md).
+  - type: input
+    id: nombre
+    attributes:
+      label: Nombre de la página
+      description: La entidad y qué publica.
+      placeholder: "Gobernación del Cauca · convocatorias"
+    validations:
+      required: true
+  - type: input
+    id: direccion
+    attributes:
+      label: Dirección
+      description: La dirección exacta donde aparece la lista de convocatorias (empieza por https://).
+      placeholder: "https://…"
+    validations:
+      required: true
+  - type: dropdown
+    id: lista
+    attributes:
+      label: ¿En qué lista va?
+      options:
+        - Alerta de convocatorias (la principal)
+        - Becas de doctorado
+        - No sé
+    validations:
+      required: true
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Tipo
+      description: Para los filtros de la página. Puedes escoger varios.
+      multiple: true
+      options:
+        - Ciencia y tecnología
+        - Cooperación
+        - Becas
+        - Emprendimiento
+        - Paz
+        - En Colombia (doctorado)
+        - En el exterior (doctorado)
+        - Otro (cuéntalo abajo)
+  - type: textarea
+    id: por-que
+    attributes:
+      label: ¿Por qué sirve?
+      description: Quién la usaría y qué convocatorias publica.
+    validations:
+      required: true
+  - type: dropdown
+    id: sin-javascript
+    attributes:
+      label: ¿Se ve el texto de las convocatorias sin JavaScript?
+      description: Abre la página y mira el código fuente (Ctrl+U). Si ahí aparecen los nombres de las convocatorias, carga sin JavaScript.
+      options:
+        - Sí, se ve el texto
+        - No, sale vacía o dice «Cargando…»
+        - No sé
+    validations:
+      required: true
+  - type: checkboxes
+    id: oficial
+    attributes:
+      label: Antes de enviar
+      options:
+        - label: Es una página oficial (no un agregador ni un blog) y no pide iniciar sesión.
+          required: true

@@ -1,0 +1,39 @@
+name: Arregla una dirección que se cayó
+description: Una página de la lista da error, cambió de dirección o dejó de mostrar las convocatorias.
+title: "Dirección caída: "
+labels: ["direccion-caida"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por avisar. Todo lo que escribas aquí es público: **no pongas correos, teléfonos ni datos personales**.
+        Si la página aparece en la alerta como «No se pudo revisar hoy» varios días seguidos, eso también sirve.
+  - type: input
+    id: pagina
+    attributes:
+      label: ¿Qué página de la lista?
+      description: El nombre como aparece en la alerta.
+      placeholder: "APC-Colombia · fondos de cooperación"
+    validations:
+      required: true
+  - type: dropdown
+    id: que-pasa
+    attributes:
+      label: ¿Qué pasa?
+      options:
+        - Da error (no abre, 404, 403…)
+        - Cambió de dirección
+        - Abre, pero ya no muestra las convocatorias
+        - Otra cosa (cuéntala abajo)
+    validations:
+      required: true
+  - type: input
+    id: nueva
+    attributes:
+      label: Dirección nueva, si la conoces
+      placeholder: "https://…"
+  - type: textarea
+    id: detalle
+    attributes:
+      label: Detalle
+      description: Desde cuándo lo ves y cualquier pista que ayude.

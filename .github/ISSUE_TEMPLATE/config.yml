@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Ver la alerta
+    url: https://estado-x.github.io/alerta-convocatorias-colombia/
+    about: Lo que cambió hoy, con buscador y filtros.
+  - name: Guía para colaborar
+    url: https://github.com/Estado-X/alerta-convocatorias-colombia/blob/main/CONTRIBUTING.md
+    about: Qué páginas sirven y cómo se revisa una propuesta.
