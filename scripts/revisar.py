@@ -8,9 +8,13 @@ Solo usa la biblioteca estándar de Python. Para cada página:
   3. lo compara con el texto de la revisión anterior (data/textos/),
   4. si aparecieron o desaparecieron líneas, registra el cambio.
 
-Escribe data/estado.json, data/cambios.json, data/corrida.json y data/feed.xml.
+Escribe data/estado.json, data/cambios.json, data/corrida.json, data/feed.xml
+y un RSS por tipo (data/feed-<tipo>.xml) cuando las fuentes tienen «tipo:».
 Si corre en GitHub Actions con permiso para abrir avisos (issues), abre uno
-por cada página que cambió; quien siga el repo lo recibe por correo.
+por cada página donde apareció algo nuevo; quien siga el repo lo recibe por
+correo. Si solo desaparecieron líneas, lo anota como «sin novedades», sin
+aviso. Los avisos del robot se cierran solos a los 30 días (siguen en la
+página y en el RSS).
 
 Listas aparte: `python scripts/revisar.py --lista doctorado` lee
 fuentes-doctorado.txt y escribe en data/doctorado/. Si el archivo no existe,
@@ -61,6 +65,8 @@ TIEMPO_TOTAL = 90       # segundos como máximo para descargar una página compl
 TAMANO_MAXIMO = 8_000_000
 MAX_CAMBIOS = 300
 MAX_LINEAS_AVISO = 20
+DIAS_AVISO_ABIERTO = 30  # los avisos del robot se cierran solos después de estos días
+ROBOT = "github-actions[bot]"
 CONTROL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -98,6 +104,7 @@ RUIDO = [
         r"^\d+ (visitas|vistas|views)$",
         r"^(visitas|vistas|views)\s*:?\s*\d+",
         r"(última|ultima) actualizaci[oó]n",
+        r"^fecha de actualizaci[oó]n\b",
         r"^(cargando|loading)\b",
         r"^copyright\b|^©",
     )
@@ -226,6 +233,26 @@ def escribir(ruta: Path, contenido: str) -> None:
     temporal.replace(ruta)
 
 
+def partes_opcionales(partes: list[str]) -> tuple[list[str], list[str]]:
+    """Lo que va después de la dirección: «palabras» y, si está, «tipo: Becas, Cooperación».
+
+    El tipo es opcional y puede ir en cualquier columna después de la dirección, así que
+    las listas hechas antes de que existiera siguen sirviendo tal como están.
+    """
+    palabras: list[str] = []
+    tipos: list[str] = []
+    for parte in partes:
+        encontrado = re.match(r"\s*tipos?\s*:\s*(.*)$", parte, re.I)
+        if encontrado:
+            for tipo in encontrado.group(1).split(","):
+                tipo = re.sub(r"\s+", " ", tipo).strip()[:40]
+                if tipo and tipo not in tipos:
+                    tipos.append(tipo)
+        else:
+            palabras.extend(sin_tildes(p.strip()) for p in parte.split(",") if p.strip())
+    return palabras, tipos
+
+
 def leer_fuentes() -> list[dict]:
     fuentes = []
     usados: set[str] = set()
@@ -235,48 +262,52 @@ def leer_fuentes() -> list[dict]:
             continue
         partes = [p.strip() for p in linea.split("|")]
         if len(partes) < 2 or not partes[1].startswith(("http://", "https://")):
-            print(f"fuentes.txt, línea {numero}: no la entiendo, la salto ({linea[:60]})", file=sys.stderr)
+            print(f"{FUENTES.name}, línea {numero}: no la entiendo, la salto ({linea[:60]})", file=sys.stderr)
             continue
-        palabras = [sin_tildes(p.strip()) for p in partes[2].split(",") if p.strip()] if len(partes) > 2 else []
+        palabras, tipos = partes_opcionales(partes[2:])
         base = slug(partes[0])
         nombre_archivo, n = base, 2
         while nombre_archivo in usados:  # dos nombres parecidos no se pisan el archivo
             nombre_archivo = f"{base}-{n}"
             n += 1
         if nombre_archivo != base:
-            print(f"fuentes.txt, línea {numero}: el nombre se parece a otro; lo guardo como {nombre_archivo}", file=sys.stderr)
+            print(f"{FUENTES.name}, línea {numero}: el nombre se parece a otro; lo guardo como {nombre_archivo}", file=sys.stderr)
         usados.add(nombre_archivo)
-        fuentes.append({"nombre": partes[0], "url": partes[1], "palabras": palabras, "slug": nombre_archivo})
+        fuentes.append({"nombre": partes[0], "url": partes[1], "palabras": palabras, "tipos": tipos,
+                        "slug": nombre_archivo})
     return fuentes
+
+
+def comparar(anteriores: list[str], lineas: list[str]) -> tuple[list[str], list[str]]:
+    """Líneas que aparecieron y líneas que ya no están, en el orden de cada página."""
+    viejas, nuevas = set(anteriores), set(lineas)
+    return [l for l in lineas if l not in viejas], [l for l in anteriores if l not in nuevas]
+
+
+def sin_novedades(cambio: dict) -> bool:
+    """Un cambio en el que solo desaparecieron líneas: no trae nada nuevo que leer."""
+    agregadas = cambio.get("agregadas_n")
+    if not isinstance(agregadas, int):
+        agregadas = len(cambio.get("agregadas") or [])
+    return agregadas == 0
 
 
 # --- avisos en GitHub ---------------------------------------------------------
 
-def abrir_aviso(cambio: dict) -> str | None:
+def _github() -> tuple[str, str] | None:
+    """Token y repo si esta corrida puede usar los avisos de GitHub; si no, None."""
     token = os.environ.get("GITHUB_TOKEN")
     repo = os.environ.get("GITHUB_REPOSITORY")
     if not token or not repo or os.environ.get("AVISOS_GITHUB", "si").lower() in ("no", "0", "false"):
         return None
-    # El texto viene de páginas de terceros: va dentro de un bloque de código para que
-    # GitHub no lo convierta en menciones (@cuenta), referencias (repo#1) ni enlaces.
-    seguras = [l.replace("`", "'") for l in cambio["agregadas"][:MAX_LINEAS_AVISO]]
-    lineas = "```text\n" + ("\n".join(seguras) or "(solo desaparecieron líneas)") + "\n```"
-    mas = cambio["agregadas_n"] - min(cambio["agregadas_n"], MAX_LINEAS_AVISO)
-    cuerpo = (
-        f"**{cambio['nombre']}** cambió (revisión del {cambio['fecha_texto']}).\n\n"
-        f"Página: {cambio['url']}\n\n"
-        f"Líneas nuevas ({cambio['agregadas_n']}):\n\n{lineas}\n"
-        + (f"\n…y {mas} más.\n" if mas > 0 else "")
-        + f"\nLíneas que ya no están: {cambio['quitadas_n']}.\n\n"
-        f"Abre la página oficial para leer la convocatoria completa: este aviso solo dice que algo cambió.\n\n"
-        f"Todas las páginas: {PAGINA}"
-    )
-    titulo = f"{PREFIJO_AVISO}Cambió: {cambio['nombre']} · {cambio['fecha_texto'][:10]}"
-    datos = json.dumps({"title": titulo, "body": cuerpo}).encode()
+    return token, repo
+
+
+def _api(token: str, url: str, metodo: str = "GET", cuerpo: dict | None = None):
     pedido = urllib.request.Request(
-        f"https://api.github.com/repos/{repo}/issues",
-        data=datos,
-        method="POST",
+        url,
+        data=json.dumps(cuerpo).encode() if cuerpo is not None else None,
+        method=metodo,
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/vnd.github+json",
@@ -284,23 +315,161 @@ def abrir_aviso(cambio: dict) -> str | None:
             "Content-Type": "application/json",
         },
     )
+    with urllib.request.urlopen(pedido, timeout=TIEMPO_ESPERA) as resp:
+        return json.loads(resp.read() or b"null")
+
+
+def etiquetas_aviso() -> list[str]:
+    """«aviso» en todos los avisos del robot, más el nombre de la lista si es una lista aparte.
+
+    Así los avisos no se mezclan con los issues de quienes colaboran.
+    """
+    return ["aviso"] + ([LISTA] if LISTA else [])
+
+
+def cuerpo_aviso(cambio: dict) -> str:
+    # El texto viene de páginas de terceros: va dentro de un bloque de código para que
+    # GitHub no lo convierta en menciones (@cuenta), referencias (repo#1) ni enlaces.
+    seguras = [l.replace("`", "'") for l in cambio["agregadas"][:MAX_LINEAS_AVISO]]
+    lineas = "```text\n" + "\n".join(seguras) + "\n```"
+    mas = cambio["agregadas_n"] - min(cambio["agregadas_n"], MAX_LINEAS_AVISO)
+    return (
+        f"**{cambio['nombre']}** cambió (revisión del {cambio['fecha_texto']}).\n\n"
+        f"Página: {cambio['url']}\n\n"
+        f"Líneas nuevas ({cambio['agregadas_n']}):\n\n{lineas}\n"
+        + (f"\n…y {mas} más.\n" if mas > 0 else "")
+        + f"\nLíneas que ya no están: {cambio['quitadas_n']}.\n\n"
+        f"Abre la página oficial para leer la convocatoria completa: este aviso solo dice que algo cambió.\n\n"
+        f"Todas las páginas: {PAGINA}\n\n"
+        f"Este aviso se cierra solo a los {DIAS_AVISO_ABIERTO} días; el cambio sigue en la página y en el RSS."
+    )
+
+
+def abrir_aviso(cambio: dict) -> str | None:
+    if sin_novedades(cambio):  # solo desaparecieron líneas: no hay nada nuevo que avisar
+        return None
+    github = _github()
+    if not github:
+        return None
+    token, repo = github
+    titulo = f"{PREFIJO_AVISO}Cambió: {cambio['nombre']} · {cambio['fecha_texto'][:10]}"
+    cuerpo = cuerpo_aviso(cambio)
+    url = f"https://api.github.com/repos/{repo}/issues"
     try:
-        with urllib.request.urlopen(pedido, timeout=TIEMPO_ESPERA) as resp:
-            return json.loads(resp.read()).get("html_url")
+        try:
+            respuesta = _api(token, url, "POST", {"title": titulo, "body": cuerpo, "labels": etiquetas_aviso()})
+        except urllib.error.HTTPError as error:
+            if error.code not in (403, 422):
+                raise
+            # Si las etiquetas no se pueden poner, el aviso sale igual, sin etiquetas.
+            respuesta = _api(token, url, "POST", {"title": titulo, "body": cuerpo})
+        return (respuesta or {}).get("html_url")
     except Exception as error:  # un aviso que falla no tumba la corrida
         print(f"No pude abrir el aviso de {cambio['nombre']}: {type(error).__name__}: {error}", file=sys.stderr)
         return None
 
 
+def avisos_por_cerrar(issues: list[dict], ahora: datetime, dias: int = DIAS_AVISO_ABIERTO) -> list[dict]:
+    """Avisos abiertos de esta lista, abiertos por el robot hace más de «dias» días.
+
+    Nunca toca issues de personas ni pull requests: solo los del robot cuyo título
+    empieza como los avisos de esta lista («Cambió: …» o «Doctorado · Cambió: …»).
+    """
+    if dias <= 0:
+        return []
+    limite = ahora - timedelta(days=dias)
+    prefijo = f"{PREFIJO_AVISO}Cambió: "
+    salida = []
+    for issue in issues:
+        if "pull_request" in issue or issue.get("state", "open") != "open":
+            continue
+        if (issue.get("user") or {}).get("login") != ROBOT:
+            continue
+        if not str(issue.get("title", "")).startswith(prefijo):
+            continue
+        try:
+            creado = datetime.fromisoformat(str(issue["created_at"]).replace("Z", "+00:00"))
+        except (KeyError, ValueError):
+            continue
+        if creado <= limite:
+            salida.append(issue)
+    return salida
+
+
+def dias_aviso_abierto() -> int:
+    try:
+        return int(os.environ.get("AVISOS_DIAS", DIAS_AVISO_ABIERTO))
+    except ValueError:
+        return DIAS_AVISO_ABIERTO
+
+
+def cerrar_avisos_viejos(ahora: datetime) -> int:
+    """Cierra los avisos del robot que llevan más de 30 días abiertos (AVISOS_DIAS lo cambia; 0 no cierra)."""
+    github = _github()
+    dias = dias_aviso_abierto()
+    if not github or dias <= 0:
+        return 0
+    token, repo = github
+    abiertos: list[dict] = []
+    try:
+        for pagina in range(1, 11):  # hasta 1.000 issues abiertos
+            lote = _api(token, f"https://api.github.com/repos/{repo}/issues?state=open&per_page=100&page={pagina}")
+            if not lote:
+                break
+            abiertos.extend(lote)
+            if len(lote) < 100:
+                break
+    except Exception as error:
+        print(f"No pude leer los avisos abiertos: {type(error).__name__}: {error}", file=sys.stderr)
+        return 0
+    cerrados = 0
+    for issue in avisos_por_cerrar(abiertos, ahora, dias):
+        numero = issue.get("number")
+        try:
+            _api(token, f"https://api.github.com/repos/{repo}/issues/{numero}/comments", "POST", {
+                "body": f"Este aviso se cierra solo a los {dias} días. El cambio sigue en la página "
+                        f"y en el RSS: {PAGINA}"})
+            _api(token, f"https://api.github.com/repos/{repo}/issues/{numero}", "PATCH",
+                 {"state": "closed", "state_reason": "completed"})
+            cerrados += 1
+        except Exception as error:  # un aviso que no se cierra no tumba la corrida
+            print(f"No pude cerrar el aviso #{numero}: {type(error).__name__}: {error}", file=sys.stderr)
+    return cerrados
+
+
 # --- RSS (Atom) ---------------------------------------------------------------
 
-def feed(cambios: list[dict], ahora: datetime) -> str:
+def ruta_feed_tipo(tipo: str) -> str:
+    """data/feed-becas.xml (o data/doctorado/feed-en-el-exterior.xml en una lista aparte)."""
+    return (f"data/{LISTA}/" if LISTA else "data/") + f"feed-{slug(tipo)}.xml"
+
+
+def tipos_de(cambio: dict, tipos_por_slug: dict[str, list[str]]) -> list[str]:
+    """Tipos de un cambio: los que guardó él o, si es anterior a los tipos, los de su fuente hoy."""
+    if cambio.get("tipos"):
+        return list(cambio["tipos"])
+    return list(tipos_por_slug.get(cambio.get("slug", ""), []))
+
+
+def tipos_en_orden(fuentes: list[dict]) -> list[str]:
+    vistos: list[str] = []
+    for f in fuentes:
+        for t in f.get("tipos", []):
+            if t not in vistos:
+                vistos.append(t)
+    return vistos
+
+
+def feed(cambios: list[dict], ahora: datetime, tipo: str | None = None) -> str:
+    """RSS (Atom) con lo nuevo. Los cambios «sin novedades» no entran: no traen nada que leer."""
     def x(t: str) -> str:
         return html.escape(t, quote=True)
 
+    titulo = titulo_lista() + (f" · {tipo}" if tipo else "")
+    propio = SITIO + (ruta_feed_tipo(tipo) if tipo else RUTA_FEED)
     entradas = []
-    for c in cambios[:50]:
-        resumen = "\n".join(c["agregadas"][:10]) or "Desaparecieron líneas de la página."
+    for c in [c for c in cambios if not sin_novedades(c)][:50]:
+        resumen = "\n".join((c.get("agregadas") or [])[:10])
         entradas.append(
             "  <entry>\n"
             f"    <title>{x('Cambió: ' + c['nombre'])}</title>\n"
@@ -313,10 +482,10 @@ def feed(cambios: list[dict], ahora: datetime) -> str:
     return (
         '<?xml version="1.0" encoding="utf-8"?>\n'
         '<feed xmlns="http://www.w3.org/2005/Atom">\n'
-        f"  <title>{x(titulo_lista())} · Estado X</title>\n"
+        f"  <title>{x(titulo)} · Estado X</title>\n"
         f"  <link href=\"{x(PAGINA)}\"/>\n"
-        f"  <link rel=\"self\" href=\"{x(SITIO + RUTA_FEED)}\"/>\n"
-        f"  <id>{x(PAGINA)}</id>\n"
+        f"  <link rel=\"self\" href=\"{x(propio)}\"/>\n"
+        f"  <id>{x(propio if tipo else PAGINA)}</id>\n"
         f"  <updated>{ahora.isoformat(timespec='seconds')}</updated>\n"
         "  <author><name>Estado X</name></author>\n"
         + "\n".join(entradas)
@@ -344,6 +513,7 @@ def main() -> int:
             "slug": fuente["slug"],
             "nombre": fuente["nombre"],
             "url": fuente["url"],
+            "tipos": fuente["tipos"],
             "ultima_revision": ahora.isoformat(),
             "ultima_revision_texto": fecha_texto(ahora),
             "ultimo_cambio": previo.get("ultimo_cambio"),
@@ -378,9 +548,7 @@ def main() -> int:
         if anteriores is None:
             ficha["estado"] = "nueva"  # primera revisión: queda como base, sin aviso
         else:
-            viejas, nuevas = set(anteriores), set(lineas)
-            agregadas = [l for l in lineas if l not in viejas]
-            quitadas = [l for l in anteriores if l not in nuevas]
+            agregadas, quitadas = comparar(anteriores, lineas)
             if agregadas or quitadas:
                 cambio = {
                     "slug": fuente["slug"],
@@ -391,19 +559,28 @@ def main() -> int:
                     "agregadas": agregadas[:40],
                     "agregadas_n": len(agregadas),
                     "quitadas_n": len(quitadas),
+                    "tipos": fuente["tipos"],
+                    "sin_novedades": not agregadas,
                 }
+                # Si solo desaparecieron líneas, queda anotado como «sin novedades»:
+                # sin aviso, fuera del RSS y sin mover el «último cambio» de la página.
                 cambio["aviso"] = abrir_aviso(cambio)
                 nuevos.append(cambio)
-                ficha.update(ultimo_cambio=ahora.isoformat(), ultimo_cambio_texto=fecha_texto(ahora),
-                             ultimas_agregadas=agregadas[:8])
+                if agregadas:
+                    ficha.update(ultimo_cambio=ahora.isoformat(), ultimo_cambio_texto=fecha_texto(ahora),
+                                 ultimas_agregadas=agregadas[:8])
         escribir(archivo, "\n".join(lineas) + ("\n" if lineas else ""))
         estado.append(ficha)
 
     cambios = (nuevos + cambios)[:MAX_CAMBIOS]
+    tipos = tipos_en_orden(fuentes)
+    tipos_por_slug = {f["slug"]: f["tipos"] for f in fuentes}
+    con_novedades = sum(1 for c in nuevos if not sin_novedades(c))
     escribir(DATOS / "estado.json", json.dumps({
         "generado": ahora.isoformat(),
         "generado_texto": fecha_texto(ahora),
         "fuentes": estado,
+        "tipos": [{"nombre": t, "feed": ruta_feed_tipo(t)} for t in tipos],
     }, ensure_ascii=False, indent=2) + "\n")
     escribir(DATOS / "cambios.json", json.dumps({"cambios": cambios}, ensure_ascii=False, indent=2) + "\n")
     escribir(DATOS / "corrida.json", json.dumps({
@@ -411,10 +588,17 @@ def main() -> int:
         "fecha_texto": fecha_texto(ahora),
         "revisadas": len(fuentes),
         "cambios": len(nuevos),
+        "con_novedades": con_novedades,
         "errores": errores,
     }, ensure_ascii=False, indent=2) + "\n")
     escribir(DATOS / "feed.xml", feed(cambios, ahora))
-    print(f"Revisadas {len(fuentes)} páginas · {len(nuevos)} con cambios · {len(errores)} con error")
+    for tipo in tipos:
+        del_tipo = [c for c in cambios if tipo in tipos_de(c, tipos_por_slug)]
+        escribir(RAIZ / ruta_feed_tipo(tipo), feed(del_tipo, ahora, tipo))
+    cerrados = cerrar_avisos_viejos(ahora)
+    print(f"Revisadas {len(fuentes)} páginas · {con_novedades} con algo nuevo · "
+          f"{len(nuevos) - con_novedades} sin novedades · {len(errores)} con error"
+          + (f" · {cerrados} avisos viejos cerrados" if cerrados else ""))
     return 0
 
 
