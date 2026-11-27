@@ -43,7 +43,7 @@ a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px soli
 .cab { background: var(--marfil-050); border-bottom: 1px solid var(--borde-fuerte); }
 .cab__in { padding-block: 40px 32px; display: grid; gap: 28px; }
 .cab__texto { display: grid; gap: 18px; justify-items: start; align-content: start; min-width: 0; }
-h1 { font: 300 clamp(44px, 12vw, 88px)/1.02 var(--titulo); letter-spacing: -.01em; color: var(--vino); text-wrap: balance; }
+h1 { font: 300 clamp(36px, 11.5vw, 88px)/1.02 var(--titulo); letter-spacing: -.01em; color: var(--vino); text-wrap: balance; overflow-wrap: normal; }
 h1 em { font-style: normal; font-weight: inherit; color: var(--cobre); }
 .bajada { font-size: clamp(18px, 2.2vw, 21px); line-height: 1.45; max-width: 54ch; }
 .cab__accion { display: flex; flex-wrap: wrap; gap: 14px 26px; align-items: center; margin-top: 6px; width: 100%; }
@@ -102,7 +102,7 @@ h1 em { font-style: normal; font-weight: inherit; color: var(--cobre); }
   background: #fff; border: 1.5px solid var(--borde-fuerte); border-radius: var(--r-md);
   -webkit-appearance: none; appearance: none;
 }
-.filtros__campo::placeholder { color: #8a8070; }
+.filtros__campo::placeholder { color: var(--muted); opacity: 1; }
 .filtros__campo:focus { outline: 3px solid var(--vino); outline-offset: 2px; border-color: var(--vino); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 .chip {
@@ -125,14 +125,14 @@ mark { background: transparent; color: var(--cobre-osc); font-weight: 700; }
 .cambio { display: grid; gap: 14px; padding: 24px 0; border-top: 1px solid var(--borde-fuerte); min-width: 0; }
 .lineas { display: grid; gap: 8px; }
 .lineas li { position: relative; padding-left: 24px; font-size: 19px; line-height: 1.38; color: var(--tinta); overflow-wrap: anywhere; }
-.lineas li::before { content: "+"; position: absolute; left: 0; top: 0; font: 600 18px/1.38 var(--mono); color: var(--oliva-700); }
+.lineas li::before { content: "+"; content: "+" / ""; position: absolute; left: 0; top: 0; font: 600 18px/1.38 var(--mono); color: var(--oliva-700); }
 .lineas__mas { padding-left: 24px; font-size: 15px; color: var(--muted); }
 .cambio__pie { display: grid; gap: 12px; align-items: end; min-width: 0; }
 .cambio__quien { display: grid; gap: 4px; min-width: 0; }
 .cambio__nombre { font: 600 16px/1.35 var(--sans); color: var(--vino); }
 .cambio__fecha { font-size: 14.5px; line-height: 1.4; color: var(--muted); font-variant-numeric: tabular-nums; }
 .cambio__acciones { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; }
-.cambio__aviso { font-size: 14.5px; padding-block: 10px; }
+.cambio__aviso { display: inline-flex; align-items: center; min-height: 44px; font-size: 14.5px; }
 .ver-mas { margin-top: 20px; }
 
 .sin-novedades { margin-top: 18px; font-size: 15px; color: var(--muted); }
@@ -150,7 +150,7 @@ mark { background: transparent; color: var(--cobre-osc); font-weight: 700; }
 .fuente__tipo { color: var(--oliva-700); font-weight: 600; }
 .estado { grid-column: 1; display: flex; gap: 9px; align-items: baseline; font-size: 15px; line-height: 1.4; font-weight: 600; color: var(--tinta); margin-top: 8px; }
 .estado--error { font-weight: 400; }
-.fuente__enlace { grid-column: 2; justify-self: end; align-self: end; font-size: 15px; font-weight: 600; padding-block: 10px; white-space: nowrap; }
+.fuente__enlace { grid-column: 2; justify-self: end; align-self: end; display: inline-flex; align-items: center; min-height: 44px; font-size: 15px; font-weight: 600; white-space: nowrap; }
 .fuente__enlace--no { color: var(--muted); font-weight: 400; }
 
 /* Avisos y lista propia */

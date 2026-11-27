@@ -193,7 +193,7 @@
     var caja = $('filtro-tipos');
     var tipos = F.tiposEnOrden(estadoPagina.tiposPorNombre);
     vaciar(caja);
-    if (tipos.length < 2) { caja.hidden = true; return; }
+    if (tipos.length < 2) { estadoPagina.tipo = ''; caja.hidden = true; return; }
     if (tipos.indexOf(estadoPagina.tipo) === -1) estadoPagina.tipo = '';
     [''].concat(tipos).forEach(function (t) {
       var b = el('button', 'chip', t || 'Todo');
@@ -228,7 +228,7 @@
     if (filtrando) {
       cuenta.textContent = vistos.length
         ? 'Mostrando ' + plural(vistos.length, 'cambio', 'cambios') + ' de ' + conNovedades.length + '.'
-        : '';
+        : 'Ningún cambio con esa búsqueda.';
     } else {
       cuenta.textContent = '';
     }

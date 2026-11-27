@@ -41,7 +41,7 @@
         <a class="enlace-fuerte" href="../">Volver a la alerta de convocatorias</a>
       </div>
     </div>
-    <div class="pulso" aria-live="polite">
+    <div class="pulso">
       <dl class="pulso__cifras">
         <div><dt>Páginas vigiladas</dt><dd id="n-fuentes">–</dd></div>
         <div><dt>Novedades registradas</dt><dd id="n-cambios">–</dd></div>
@@ -62,14 +62,14 @@
         <h2 id="t-cambios">Lo que cambió</h2>
         <p class="nota">Lo más nuevo, primero. La convocatoria y sus requisitos siempre están en la página oficial.</p>
       </div>
-      <p class="resumen" id="resumen-semana" aria-live="polite"></p>
+      <p class="resumen" id="resumen-semana"></p>
       <form class="filtros" id="form-buscar" role="search" aria-label="Buscar en lo que apareció">
         <label class="filtros__etiqueta" for="buscar">Busca en lo que apareció</label>
         <input class="filtros__campo" id="buscar" type="search" name="buscar" maxlength="80" autocomplete="off" spellcheck="false" placeholder="doctorado, China, ingeniería…">
         <div class="chips" id="filtro-tipos" role="group" aria-label="Filtra por dónde se estudia" hidden></div>
         <p class="filtros__cuenta" id="cuenta-filtro" aria-live="polite"></p>
       </form>
-      <div id="lista-cambios" aria-live="polite" aria-busy="true">
+      <div id="lista-cambios" aria-busy="true">
         <p class="aviso">Cargando los cambios…</p>
       </div>
       <div id="sin-novedades" hidden></div>
@@ -80,7 +80,7 @@
         <h2 id="t-paginas">Las páginas que vigilamos</h2>
         <p class="nota">Una revisión al día. En la página de MinCiencias solo se miran las líneas que hablan de doctorado, maestría, becas o formación.</p>
       </div>
-      <div id="lista-fuentes" aria-live="polite" aria-busy="true">
+      <div id="lista-fuentes" aria-busy="true">
         <p class="aviso">Cargando las páginas…</p>
       </div>
     </section>
