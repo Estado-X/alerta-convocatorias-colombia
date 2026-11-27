@@ -1,10 +1,12 @@
 name: Revisar convocatorias
 
-# Revisión una vez al día: está programada a las 6:00 a. m. (hora de Colombia), pero GitHub puede correrla
+# Revisión una vez al día: está programada a las 4:17 a. m. (hora de Colombia). El minuto 17 es a propósito:
+# GitHub recomienda no programar al inicio de la hora, que es cuando más se retrasa. Aun así puede correrla
 # varias horas después cuando tiene mucha carga. Para apagarla, poner "# " al inicio de las dos líneas de schedule.
+# El grupo de concurrencia «revisar-convocatorias» lo comparte con abrir-v2.yml para que no corran a la vez.
 on:
   schedule:
-    - cron: "0 11 * * *"
+    - cron: "17 9 * * *"
   workflow_dispatch:
 
 permissions:

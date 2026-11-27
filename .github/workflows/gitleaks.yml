@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────
+# Escaneo de secretos con gitleaks · Estado X · _seguridad/kit_repo · v1
+#
+# Corre en GitHub con cada push y cada PR, también cuando subes por la web.
+# Si encuentra una llave, el check sale en rojo y te llega el aviso de GitHub.
+# Ojo: avisa DESPUÉS de que el commit entró; no lo impide. Si se dispara,
+# la llave se da por filtrada: cámbiala primero, limpia después.
+#
+# Licencia: en repos de la ORGANIZACIÓN Estado-X la acción pide una
+# licencia gratuita (gitleaks.io), guardada como secreto GITLEAKS_LICENSE.
+# La organización está en GitHub Free: ahí los secretos de la organización
+# NO llegan a los repos privados. Mientras el repo sea privado, crea el
+# secreto en el propio repo (Settings → Secrets and variables → Actions).
+# En repos de una cuenta personal (whoanperez, perezwhoan) no hace falta.
+# ─────────────────────────────────────────────────────────────
+name: gitleaks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1"   # lunes 4:00 a. m. Bogotá: repaso semanal de todo el historial
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+          GITLEAKS_ENABLE_COMMENTS: false
