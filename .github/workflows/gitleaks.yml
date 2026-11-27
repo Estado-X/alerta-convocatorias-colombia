@@ -1,17 +1,17 @@
 # ─────────────────────────────────────────────────────────────
-# Escaneo de secretos con gitleaks · Estado X · _seguridad/kit_repo · v1
+# Escaneo de secretos con gitleaks · Estado X · basado en _seguridad/kit_repo v1
 #
-# Corre en GitHub con cada push y cada PR, también cuando subes por la web.
-# Si encuentra una llave, el check sale en rojo y te llega el aviso de GitHub.
-# Ojo: avisa DESPUÉS de que el commit entró; no lo impide. Si se dispara,
-# la llave se da por filtrada: cámbiala primero, limpia después.
+# Corre en GitHub con cada push y cada PR, también cuando se sube por la web,
+# y repasa todo el historial los lunes. Si encuentra una llave, el check sale
+# en rojo. Ojo: avisa DESPUÉS de que el commit entró; no lo impide. Si se
+# dispara, la llave se da por filtrada: cámbiala primero, limpia después.
 #
-# Licencia: en repos de la ORGANIZACIÓN Estado-X la acción pide una
-# licencia gratuita (gitleaks.io), guardada como secreto GITLEAKS_LICENSE.
-# La organización está en GitHub Free: ahí los secretos de la organización
-# NO llegan a los repos privados. Mientras el repo sea privado, crea el
-# secreto en el propio repo (Settings → Secrets and variables → Actions).
-# En repos de una cuenta personal (whoanperez, perezwhoan) no hace falta.
+# Por qué no usa la acción del kit (gitleaks/gitleaks-action): en repos de
+# una organización esa acción pide una licencia de gitleaks.io. El programa
+# gitleaks en sí es de código abierto (MIT) y no la pide, así que aquí se
+# baja la versión fija, se comprueba su huella SHA-256 y se corre directo.
+# Decisión de Juan (22 nov 2026), la misma de gemelo-bogota. El repo ya es
+# público y tiene Secret Protection y push protection de GitHub.
 # ─────────────────────────────────────────────────────────────
 name: gitleaks
 
@@ -29,12 +29,24 @@ jobs:
   scan:
     name: gitleaks
     runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      # Huella de gitleaks_8.30.1_linux_x64.tar.gz, igual en el archivo de huellas
+      # oficial de la publicación y en la que reporta GitHub para ese archivo.
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
-          GITLEAKS_ENABLE_COMMENTS: false
+
+      - name: Instalar gitleaks (versión fija, huella comprobada)
+        run: |
+          archivo="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$archivo" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archivo}"
+          echo "${GITLEAKS_SHA256}  ${archivo}" | sha256sum -c -
+          tar -xzf "$archivo" gitleaks
+          ./gitleaks version
+
+      - name: Revisar todo el historial
+        # --redact: si encuentra algo, el registro no muestra el secreto.
+        run: ./gitleaks git . --redact --no-banner --verbose --exit-code 1
