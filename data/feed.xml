@@ -4,8 +4,15 @@
   <link href="https://estado-x.github.io/alerta-convocatorias-colombia/"/>
   <link rel="self" href="https://estado-x.github.io/alerta-convocatorias-colombia/data/feed.xml"/>
   <id>https://estado-x.github.io/alerta-convocatorias-colombia/</id>
-  <updated>2026-11-27T19:01:00+00:00</updated>
+  <updated>2026-11-28T17:36:35+00:00</updated>
   <author><name>Estado X</name></author>
+  <entry>
+    <title>Cambió: MinCiencias · convocatorias</title>
+    <link href="https://minciencias.gov.co/convocatorias/todas"/>
+    <id>tag:estado-x.github.io,2026:minciencias-convocatorias:2026-11-28T17:36:35+00:00</id>
+    <updated>2026-11-28T17:36:35+00:00</updated>
+    <summary>Inicio » Convocatorias » Todas las convocatorias</summary>
+  </entry>
   <entry>
     <title>Cambió: MinCiencias · convocatorias</title>
     <link href="https://minciencias.gov.co/convocatorias/todas"/>

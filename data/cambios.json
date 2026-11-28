@@ -4,6 +4,19 @@
       "slug": "minciencias-convocatorias",
       "nombre": "MinCiencias · convocatorias",
       "url": "https://minciencias.gov.co/convocatorias/todas",
+      "fecha": "2026-11-28T17:36:35+00:00",
+      "fecha_texto": "28/11/2026 12:36 p. m.",
+      "agregadas": [
+        "Inicio » Convocatorias » Todas las convocatorias"
+      ],
+      "agregadas_n": 1,
+      "quitadas_n": 1,
+      "aviso": "https://github.com/Estado-X/alerta-convocatorias-colombia/issues/16"
+    },
+    {
+      "slug": "minciencias-convocatorias",
+      "nombre": "MinCiencias · convocatorias",
+      "url": "https://minciencias.gov.co/convocatorias/todas",
       "fecha": "2026-11-27T19:01:00+00:00",
       "fecha_texto": "27/11/2026 2:01 p. m.",
       "agregadas": [
